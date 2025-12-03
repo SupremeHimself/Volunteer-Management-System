@@ -13,6 +13,7 @@ public class LoginDialog extends JDialog {
     
     private JTextField usernameField;
     private JPasswordField passwordField;
+    private JTextField signupUsernameField;
     private JTextField signupFirstNameField;
     private JTextField signupLastNameField;
     private JTextField signupEmailField;
@@ -31,14 +32,20 @@ public class LoginDialog extends JDialog {
     }
 
     private void initializeUI() {
-        setSize(450, 550);
+        // Calculate appropriate size based on screen dimensions
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        int dialogWidth = Math.min(420, (int)(screenSize.width * 0.85));
+        int dialogHeight = Math.min(600, (int)(screenSize.height * 0.80));
+        
+        setSize(dialogWidth, dialogHeight);
         setLocationRelativeTo(null);
-        setResizable(false);
+        setResizable(true);
+        setMinimumSize(new Dimension(380, 480));
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBackground(Color.WHITE);
-        mainPanel.setBorder(new EmptyBorder(40, 50, 40, 50));
+        mainPanel.setBorder(new EmptyBorder(20, 15, 20, 15));
 
         // Card panel for login/signup
         cardLayout = new CardLayout();
@@ -48,7 +55,7 @@ public class LoginDialog extends JDialog {
         cardPanel.add(createLoginPanel(), "LOGIN");
         cardPanel.add(createSignupPanel(), "SIGNUP");
 
-        mainPanel.add(cardPanel, BorderLayout.CENTER);
+        mainPanel.add(cardPanel, BorderLayout.WEST);
 
         add(mainPanel);
     }
@@ -63,7 +70,7 @@ public class LoginDialog extends JDialog {
         JLabel titleLabel = new JLabel("Sign In");
         titleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 28));
         titleLabel.setForeground(TEXT_PRIMARY);
-        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         formPanel.add(titleLabel);
         formPanel.add(Box.createVerticalStrut(30));
 
@@ -185,25 +192,55 @@ public class LoginDialog extends JDialog {
         JPanel formPanel = new JPanel();
         formPanel.setBackground(Color.WHITE);
         formPanel.setLayout(new BoxLayout(formPanel, BoxLayout.Y_AXIS));
-        formPanel.setBorder(new EmptyBorder(20, 40, 20, 40));
 
+        // Back button and Title
+        JPanel headerPanel = new JPanel();
+        headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.X_AXIS));
+        headerPanel.setBackground(Color.WHITE);
+        headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        headerPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        
+        JButton backButton = new JButton("\u2190 Back");
+        backButton.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        backButton.setForeground(PRIMARY_BLUE);
+        backButton.setBackground(Color.WHITE);
+        backButton.setBorderPainted(false);
+        backButton.setFocusPainted(false);
+        backButton.setContentAreaFilled(false);
+        backButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        backButton.addActionListener(e -> cardLayout.show(cardPanel, "LOGIN"));
+        
+        headerPanel.add(backButton);
+        
+        formPanel.add(headerPanel);
+        formPanel.add(Box.createVerticalStrut(3));
+        
+        JLabel titleLabel = new JLabel("Create Account");
+        titleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 20));
+        titleLabel.setForeground(TEXT_PRIMARY);
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        formPanel.add(titleLabel);
+        formPanel.add(Box.createVerticalStrut(8));
+
+        signupUsernameField = createTextField("Username");
         signupFirstNameField = createTextField("First Name");
         signupLastNameField = createTextField("Last Name");
         signupEmailField = createTextField("Email");
         signupPhoneField = createTextField("Phone");
         signupPasswordField = new JPasswordField();
-        signupPasswordField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        signupPasswordField.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         signupPasswordField.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(209, 213, 219), 1),
-            new EmptyBorder(10, 12, 10, 12)
+            new EmptyBorder(5, 8, 5, 8)
         ));
         signupConfirmPasswordField = new JPasswordField();
-        signupConfirmPasswordField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        signupConfirmPasswordField.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         signupConfirmPasswordField.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(209, 213, 219), 1),
-            new EmptyBorder(10, 12, 10, 12)
+            new EmptyBorder(5, 8, 5, 8)
         ));
 
+        addFormField(formPanel, "Username", signupUsernameField);
         addFormField(formPanel, "First Name", signupFirstNameField);
         addFormField(formPanel, "Last Name", signupLastNameField);
         addFormField(formPanel, "Email", signupEmailField);
@@ -224,23 +261,20 @@ public class LoginDialog extends JDialog {
         signupButton.setPreferredSize(new Dimension(150, 40));
         signupButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        JButton cancelButton = new JButton("Cancel");
-        cancelButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        cancelButton.setForeground(TEXT_SECONDARY);
-        cancelButton.setBackground(GRAY_BG);
-        cancelButton.setFocusPainted(false);
-        cancelButton.setBorderPainted(false);
-        cancelButton.setPreferredSize(new Dimension(150, 40));
-        cancelButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        JButton backToLoginButton = new JButton("Back");
+        backToLoginButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        backToLoginButton.setForeground(TEXT_SECONDARY);
+        backToLoginButton.setBackground(GRAY_BG);
+        backToLoginButton.setFocusPainted(false);
+        backToLoginButton.setBorderPainted(false);
+        backToLoginButton.setPreferredSize(new Dimension(150, 40));
+        backToLoginButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         signupButton.addActionListener(e -> attemptSignup());
-        cancelButton.addActionListener(e -> {
-            authenticated = false;
-            dispose();
-        });
+        backToLoginButton.addActionListener(e -> cardLayout.show(cardPanel, "LOGIN"));
 
         buttonPanel.add(signupButton);
-        buttonPanel.add(cancelButton);
+        buttonPanel.add(backToLoginButton);
 
         formPanel.add(buttonPanel);
         formPanel.add(Box.createVerticalStrut(10));
@@ -263,25 +297,38 @@ public class LoginDialog extends JDialog {
         switchPanel.add(switchButton);
         formPanel.add(switchPanel);
 
-        return formPanel;
+        // Wrap in scroll pane
+        JScrollPane scrollPane = new JScrollPane(formPanel);
+        scrollPane.setBorder(null);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        
+        JPanel wrapperPanel = new JPanel(new BorderLayout());
+        wrapperPanel.setBackground(Color.WHITE);
+        wrapperPanel.add(scrollPane, BorderLayout.CENTER);
+
+        return wrapperPanel;
     }
     
     private void addFormField(JPanel panel, String label, JComponent field) {
         JLabel fieldLabel = new JLabel(label);
-        fieldLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        fieldLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         fieldLabel.setForeground(TEXT_PRIMARY);
+        fieldLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(fieldLabel);
-        panel.add(Box.createVerticalStrut(5));
+        panel.add(Box.createVerticalStrut(2));
+        field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+        field.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(field);
-        panel.add(Box.createVerticalStrut(10));
+        panel.add(Box.createVerticalStrut(6));
     }
 
     private JTextField createTextField(String placeholder) {
         JTextField field = new JTextField();
-        field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        field.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         field.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(209, 213, 219), 1),
-            new EmptyBorder(12, 12, 12, 12)
+            new EmptyBorder(5, 8, 5, 8)
         ));
         // Add placeholder text
         field.setForeground(new Color(156, 163, 175));
@@ -329,6 +376,7 @@ public class LoginDialog extends JDialog {
     }
 
     private void attemptSignup() {
+        String username = signupUsernameField.getText().trim();
         String firstName = signupFirstNameField.getText().trim();
         String lastName = signupLastNameField.getText().trim();
         String email = signupEmailField.getText().trim();
@@ -336,7 +384,7 @@ public class LoginDialog extends JDialog {
         String password = new String(signupPasswordField.getPassword());
         String confirmPassword = new String(signupConfirmPasswordField.getPassword());
 
-        if (firstName.isEmpty() || lastName.isEmpty() || email.isEmpty() || password.isEmpty()) {
+        if (username.isEmpty() || firstName.isEmpty() || lastName.isEmpty() || email.isEmpty() || password.isEmpty()) {
             JOptionPane.showMessageDialog(this,
                 "Please fill in all required fields.",
                 "Signup Failed",
@@ -360,17 +408,17 @@ public class LoginDialog extends JDialog {
             return;
         }
 
-        if (authService.register(firstName, lastName, email, phone, password)) {
+        if (authService.register(username, firstName, lastName, email, phone, password)) {
             JOptionPane.showMessageDialog(this,
                 "Account created successfully! You can now sign in.",
                 "Success",
                 JOptionPane.INFORMATION_MESSAGE);
             // Switch to login panel
             cardLayout.show(cardPanel, "LOGIN");
-            usernameField.setText(email);
+            usernameField.setText(username);
         } else {
             JOptionPane.showMessageDialog(this,
-                "Email already exists. Please use a different email.",
+                "Username or email already exists. Please use different credentials.",
                 "Signup Failed",
                 JOptionPane.ERROR_MESSAGE);
         }

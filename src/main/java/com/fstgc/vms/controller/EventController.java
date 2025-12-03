@@ -20,5 +20,17 @@ public class EventController {
         return service.create(e);
     }
     
+    public Event get(int eventId) {
+        return service.get(eventId);
+    }
+    
+    public void update(Event event) {
+        service.update(event);
+    }
+    
+    public boolean delete(int eventId) {
+        return service.delete(eventId);
+    }
+    
     public java.util.List<Event> listAll() { return service.listAll(); }
 }

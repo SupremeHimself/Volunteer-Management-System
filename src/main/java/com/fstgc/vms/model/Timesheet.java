@@ -18,6 +18,8 @@ public class Timesheet implements Serializable {
     private LocalDateTime approvalDate; // nullable
     private String rejectionReason; // nullable
     private LocalDateTime createdDate = LocalDateTime.now();
+    private String lastModifiedBy;
+    private LocalDateTime lastModifiedDate;
 
     public int getTimesheetId() { return timesheetId; }
     public void setTimesheetId(int timesheetId) { this.timesheetId = timesheetId; }
@@ -41,4 +43,8 @@ public class Timesheet implements Serializable {
     public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; }
     public LocalDateTime getCreatedDate() { return createdDate; }
     public void setCreatedDate(LocalDateTime createdDate) { this.createdDate = createdDate; }
+    public String getLastModifiedBy() { return lastModifiedBy; }
+    public void setLastModifiedBy(String lastModifiedBy) { this.lastModifiedBy = lastModifiedBy; }
+    public LocalDateTime getLastModifiedDate() { return lastModifiedDate; }
+    public void setLastModifiedDate(LocalDateTime lastModifiedDate) { this.lastModifiedDate = lastModifiedDate; }
 }

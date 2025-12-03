@@ -5,7 +5,8 @@ import com.fstgc.vms.model.Volunteer;
 import com.fstgc.vms.model.Attendance;
 import com.fstgc.vms.model.Timesheet;
 import com.fstgc.vms.model.Announcement;
-import com.fstgc.vms.model.Award;
+import com.fstgc.vms.model.Event;
+
 import com.fstgc.vms.model.SystemAdmin;
 import com.fstgc.vms.model.enums.*;
 import com.fstgc.vms.repository.memory.*;
@@ -19,6 +20,7 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 public class SystemUI extends JFrame {
@@ -27,7 +29,6 @@ public class SystemUI extends JFrame {
     private final AttendanceController attendanceController;
     private final TimesheetController timesheetController;
     private final AnnouncementController announcementController;
-    private final AwardController awardController;
     private final AuthenticationService authService;
 
     private JTabbedPane tabbedPane;
@@ -49,20 +50,17 @@ public class SystemUI extends JFrame {
         this.authService = authService;
         
         // Initialize services and controllers
-        ValidationService validationService = new ValidationService();
-        VolunteerService volunteerService = new VolunteerService(new InMemoryVolunteerRepository(), validationService);
+        VolunteerService volunteerService = new VolunteerService(new InMemoryVolunteerRepository());
         EventService eventService = new EventService(new InMemoryEventRepository());
         AttendanceService attendanceService = new AttendanceService(new InMemoryAttendanceRepository());
         TimesheetService timesheetService = new TimesheetService(new InMemoryTimesheetRepository(), new InMemoryAttendanceRepository());
-        AnnouncementService announcementService = new AnnouncementService(new InMemoryAnnouncementRepository(), new NotificationService());
-        AwardService awardService = new AwardService(new InMemoryAwardRepository());
+        AnnouncementService announcementService = new AnnouncementService(new InMemoryAnnouncementRepository());
 
         this.volunteerController = new VolunteerController(volunteerService);
         this.eventController = new EventController(eventService);
         this.attendanceController = new AttendanceController(attendanceService);
         this.timesheetController = new TimesheetController(timesheetService);
         this.announcementController = new AnnouncementController(announcementService);
-        this.awardController = new AwardController(awardService);
 
         initializeUI();
     }
@@ -87,7 +85,7 @@ public class SystemUI extends JFrame {
         // Create tabbed pane with modern styling
         tabbedPane = new JTabbedPane();
         tabbedPane.setBackground(GRAY_BG);
-        tabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        tabbedPane.setFont(getEmojiFont(14));
         tabbedPane.setBorder(new EmptyBorder(10, 10, 10, 10));
         
         // Add tabs with icons
@@ -237,10 +235,10 @@ public class SystemUI extends JFrame {
         List<com.fstgc.vms.model.Event> events = eventController.listAll();
         int totalHours = volunteers.stream().mapToInt(v -> (int)v.getTotalHoursWorked()).sum();
         
-        statsPanel.add(createStatCard("Active Volunteers", String.valueOf(volunteers.size()), PRIMARY_BLUE, "👥"));
-        statsPanel.add(createStatCard("Upcoming Events", String.valueOf(events.size()), GREEN, "📅"));
-        statsPanel.add(createStatCard("Total Hours", String.valueOf(totalHours), PURPLE, "⏰"));
-        statsPanel.add(createStatCard("Badges Earned", "12", ORANGE, "🏆"));
+        statsPanel.add(createStatCard("Active Volunteers", String.valueOf(volunteers.size()), PRIMARY_BLUE, "👥", 1));
+        statsPanel.add(createStatCard("Upcoming Events", String.valueOf(events.size()), GREEN, "📅", 2));
+        statsPanel.add(createStatCard("Total Hours", String.valueOf(totalHours), PURPLE, "⏰", 4));
+        statsPanel.add(createStatCard("Badges Earned", "12", ORANGE, "🏆", 5));
         
         contentPanel.add(statsPanel);
         contentPanel.add(Box.createVerticalStrut(20));
@@ -258,7 +256,7 @@ public class SystemUI extends JFrame {
         return panel;
     }
     
-    private JPanel createStatCard(String title, String value, Color color, String emoji) {
+    private JPanel createStatCard(String title, String value, Color color, String emoji, int tabIndex) {
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(color);
@@ -266,6 +264,21 @@ public class SystemUI extends JFrame {
             BorderFactory.createLineBorder(color.darker(), 0),
             new EmptyBorder(20, 20, 20, 20)
         ));
+        card.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        card.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                tabbedPane.setSelectedIndex(tabIndex);
+            }
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                card.setBackground(color.brighter());
+            }
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                card.setBackground(color);
+            }
+        });
         
         JLabel emojiLabel = new JLabel(emoji);
         // Try multiple fonts for emoji support
@@ -308,7 +321,7 @@ public class SystemUI extends JFrame {
         panel.setLayout(new BorderLayout(10, 10));
         
         JLabel titleLabel = new JLabel("📢 Recent Announcements");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setFont(getEmojiFont(18).deriveFont(Font.BOLD));
         titleLabel.setForeground(TEXT_PRIMARY);
         panel.add(titleLabel, BorderLayout.NORTH);
         
@@ -335,7 +348,7 @@ public class SystemUI extends JFrame {
         panel.setLayout(new BorderLayout(10, 10));
         
         JLabel titleLabel = new JLabel("📅 Upcoming Events");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setFont(getEmojiFont(18).deriveFont(Font.BOLD));
         titleLabel.setForeground(TEXT_PRIMARY);
         panel.add(titleLabel, BorderLayout.NORTH);
         
@@ -550,17 +563,72 @@ public class SystemUI extends JFrame {
         // Populate table
         List<Volunteer> volunteers = volunteerController.listAll();
         for (Volunteer v : volunteers) {
+            String auditInfo = v.getLastModifiedBy() != null ? 
+                v.getLastModifiedBy() + " (" + (v.getLastModifiedDate() != null ? 
+                v.getLastModifiedDate().toLocalDate().toString() : "N/A") + ")" : "N/A";
             tableModel.addRow(new Object[]{
                 v.getId(),
                 v.getFirstName() + " " + v.getLastName(),
                 v.getEmail(),
                 v.getPhone(),
                 String.format("%.1f hrs", v.getTotalHoursWorked()),
-                v.getStatus()
+                v.getStatus(),
+                auditInfo
             });
         }
-
+        
+        // Add mouse listener for row actions
+        table.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                if (evt.getClickCount() == 2) {
+                    int row = table.getSelectedRow();
+                    if (row >= 0) {
+                        int volunteerId = (int) tableModel.getValueAt(row, 0);
+                        showEditVolunteerDialog(volunteerId);
+                    }
+                }
+            }
+        });
+        
+        // Add action buttons panel
+        JPanel actionsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
+        actionsPanel.setBackground(CARD_BG);
+        
+        JButton editBtn = createModernButton("Edit", PRIMARY_BLUE);
+        editBtn.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row >= 0) {
+                int volunteerId = (int) tableModel.getValueAt(row, 0);
+                showEditVolunteerDialog(volunteerId);
+            } else {
+                JOptionPane.showMessageDialog(this, "Please select a volunteer to edit.", "No Selection", JOptionPane.WARNING_MESSAGE);
+            }
+        });
+        
+        JButton deleteBtn = createModernButton("Delete", new Color(239, 68, 68));
+        deleteBtn.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row >= 0) {
+                int volunteerId = (int) tableModel.getValueAt(row, 0);
+                String volunteerName = (String) tableModel.getValueAt(row, 1);
+                int confirm = JOptionPane.showConfirmDialog(this,
+                    "Are you sure you want to delete volunteer: " + volunteerName + "?",
+                    "Confirm Delete",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
+                if (confirm == JOptionPane.YES_OPTION) {
+                    deleteVolunteer(volunteerId);
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Please select a volunteer to delete.", "No Selection", JOptionPane.WARNING_MESSAGE);
+            }
+        });
+        
+        actionsPanel.add(editBtn);
+        actionsPanel.add(deleteBtn);
+        
         tableCard.add(scrollPane, BorderLayout.CENTER);
+        tableCard.add(actionsPanel, BorderLayout.SOUTH);
         panel.add(tableCard, BorderLayout.CENTER);
 
         return panel;
@@ -605,13 +673,15 @@ public class SystemUI extends JFrame {
         JButton saveBtn = createModernButton("Register", PRIMARY_BLUE);
         saveBtn.addActionListener(e -> {
             try {
-                Volunteer v = volunteerController.register(
-                    firstNameField.getText(),
-                    lastNameField.getText(),
-                    emailField.getText(),
-                    phoneField.getText()
-                );
+                Volunteer v = new Volunteer();
+                v.setFirstName(firstNameField.getText());
+                v.setLastName(lastNameField.getText());
+                v.setEmail(emailField.getText());
+                v.setPhone(phoneField.getText());
                 v.setStatus((VolunteerStatus) statusCombo.getSelectedItem());
+                v.setLastModifiedBy(authService.getCurrentUser().getUsername());
+                v.setLastModifiedDate(java.time.LocalDateTime.now());
+                v = volunteerController.register(v);
                 JOptionPane.showMessageDialog(dialog, 
                     "Volunteer registered successfully!\nID: " + v.getId() + "\nHours: " + v.getTotalHoursWorked(),
                     "Success", JOptionPane.INFORMATION_MESSAGE);
@@ -632,6 +702,96 @@ public class SystemUI extends JFrame {
         
         dialog.add(mainPanel);
         dialog.setVisible(true);
+    }
+    
+    private void showEditVolunteerDialog(int volunteerId) {
+        volunteerController.get(volunteerId).ifPresent(volunteer -> {
+            JDialog dialog = new JDialog(this, "Edit Volunteer", true);
+            dialog.setSize(450, 350);
+            dialog.setLocationRelativeTo(this);
+            
+            JPanel mainPanel = new JPanel(new BorderLayout(15, 15));
+            mainPanel.setBackground(CARD_BG);
+            mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+            
+            JPanel formPanel = new JPanel(new GridLayout(5, 2, 10, 15));
+            formPanel.setBackground(CARD_BG);
+            
+            JTextField firstNameField = createModernTextField();
+            firstNameField.setText(volunteer.getFirstName());
+            JTextField lastNameField = createModernTextField();
+            lastNameField.setText(volunteer.getLastName());
+            JTextField emailField = createModernTextField();
+            emailField.setText(volunteer.getEmail());
+            JTextField phoneField = createModernTextField();
+            phoneField.setText(volunteer.getPhone());
+            JComboBox<VolunteerStatus> statusCombo = new JComboBox<>(VolunteerStatus.values());
+            statusCombo.setSelectedItem(volunteer.getStatus());
+            statusCombo.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+            
+            formPanel.add(createLabel("First Name:"));
+            formPanel.add(firstNameField);
+            formPanel.add(createLabel("Last Name:"));
+            formPanel.add(lastNameField);
+            formPanel.add(createLabel("Email:"));
+            formPanel.add(emailField);
+            formPanel.add(createLabel("Phone:"));
+            formPanel.add(phoneField);
+            formPanel.add(createLabel("Status:"));
+            formPanel.add(statusCombo);
+            
+            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+            buttonPanel.setBackground(CARD_BG);
+            
+            JButton cancelBtn = createModernButton("Cancel", TEXT_SECONDARY);
+            cancelBtn.addActionListener(e -> dialog.dispose());
+            
+            JButton saveBtn = createModernButton("Save Changes", PRIMARY_BLUE);
+            saveBtn.addActionListener(e -> {
+                try {
+                    volunteer.setFirstName(firstNameField.getText());
+                    volunteer.setLastName(lastNameField.getText());
+                    volunteer.setEmail(emailField.getText());
+                    volunteer.setPhone(phoneField.getText());
+                    volunteer.setStatus((VolunteerStatus) statusCombo.getSelectedItem());
+                    volunteer.setLastModifiedBy(authService.getCurrentUser().getUsername());
+                    volunteer.setLastModifiedDate(java.time.LocalDateTime.now());
+                    volunteerController.update(volunteer);
+                    JOptionPane.showMessageDialog(dialog, 
+                        "Volunteer updated successfully!",
+                        "Success", JOptionPane.INFORMATION_MESSAGE);
+                    dialog.dispose();
+                    refreshAllPanels();
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(dialog, 
+                        "Error: " + ex.getMessage(), 
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            });
+            
+            buttonPanel.add(cancelBtn);
+            buttonPanel.add(saveBtn);
+            
+            mainPanel.add(formPanel, BorderLayout.CENTER);
+            mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+            
+            dialog.add(mainPanel);
+            dialog.setVisible(true);
+        });
+    }
+    
+    private void deleteVolunteer(int volunteerId) {
+        try {
+            volunteerController.delete(volunteerId);
+            JOptionPane.showMessageDialog(this, 
+                "Volunteer deleted successfully!",
+                "Success", JOptionPane.INFORMATION_MESSAGE);
+            refreshAllPanels();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, 
+                "Error: " + ex.getMessage(), 
+                "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
     
     private void refreshVolunteerPanel() {
@@ -660,14 +820,17 @@ public class SystemUI extends JFrame {
     
     private Font getEmojiFont(int size) {
         // Try multiple fonts for emoji support with fallback
-        String[] fontNames = {"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", "Segoe UI Symbol", "Dialog"};
+        String[] fontNames = {"Segoe UI Emoji", "Segoe UI Symbol", "Apple Color Emoji", "Noto Color Emoji", "Arial Unicode MS", "Symbola"};
         for (String fontName : fontNames) {
             Font testFont = new Font(fontName, Font.PLAIN, size);
-            if (testFont.getFamily().equals(fontName)) {
+            // Check if font exists or can display emoji characters
+            if (testFont.getFamily().equalsIgnoreCase(fontName) || 
+                testFont.canDisplayUpTo("🏆🥇") == -1) {
                 return testFont;
             }
         }
-        return new Font(Font.SANS_SERIF, Font.PLAIN, size);
+        // Final fallback to Dialog which often works on Windows
+        return new Font("Dialog", Font.PLAIN, size);
     }
 
     private JPanel createEventPanel() {
@@ -766,9 +929,41 @@ public class SystemUI extends JFrame {
         
         card.add(contentPanel, BorderLayout.CENTER);
         
-        // Button
-        JButton registerBtn = createModernButton("Register", PRIMARY_BLUE);
-        card.add(registerBtn, BorderLayout.SOUTH);
+        // Action buttons
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
+        buttonPanel.setBackground(CARD_BG);
+        
+        JButton editBtn = new JButton("Edit");
+        editBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        editBtn.setForeground(PRIMARY_BLUE);
+        editBtn.setBackground(Color.WHITE);
+        editBtn.setBorder(BorderFactory.createLineBorder(PRIMARY_BLUE, 1));
+        editBtn.setFocusPainted(false);
+        editBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        editBtn.addActionListener(e -> showEditEventDialog(event.getEventId()));
+        
+        JButton deleteBtn = new JButton("Delete");
+        deleteBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        deleteBtn.setForeground(new Color(239, 68, 68));
+        deleteBtn.setBackground(Color.WHITE);
+        deleteBtn.setBorder(BorderFactory.createLineBorder(new Color(239, 68, 68), 1));
+        deleteBtn.setFocusPainted(false);
+        deleteBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        deleteBtn.addActionListener(e -> {
+            int confirm = JOptionPane.showConfirmDialog(this,
+                "Are you sure you want to delete event: " + event.getTitle() + "?",
+                "Confirm Delete",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE);
+            if (confirm == JOptionPane.YES_OPTION) {
+                deleteEvent(event.getEventId());
+            }
+        });
+        
+        buttonPanel.add(editBtn);
+        buttonPanel.add(deleteBtn);
+        
+        card.add(buttonPanel, BorderLayout.SOUTH);
         
         return card;
     }
@@ -795,7 +990,7 @@ public class SystemUI extends JFrame {
         
         formPanel.add(createLabel("Title:"));
         formPanel.add(titleField);
-        formPanel.add(createLabel("Date (YYYY-MM-DD):"));
+        formPanel.add(createLabel("Date (MM-DD-YYYY):"));
         formPanel.add(dateField);
         formPanel.add(createLabel("Location:"));
         formPanel.add(locationField);
@@ -840,6 +1035,102 @@ public class SystemUI extends JFrame {
         
         dialog.add(mainPanel);
         dialog.setVisible(true);
+    }
+    
+    private void showEditEventDialog(int eventId) {
+        Event event = eventController.get(eventId);
+        if (event == null) {
+            JOptionPane.showMessageDialog(this, "Event not found!", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
+        JDialog dialog = new JDialog(this, "Edit Event", true);
+        dialog.setSize(450, 450);
+        dialog.setLocationRelativeTo(this);
+        
+        JPanel mainPanel = new JPanel(new BorderLayout(15, 15));
+        mainPanel.setBackground(CARD_BG);
+        mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        
+        JPanel formPanel = new JPanel(new GridLayout(5, 2, 10, 15));
+        formPanel.setBackground(CARD_BG);
+        
+        JTextField titleField = createModernTextField();
+        titleField.setText(event.getTitle());
+        
+        JTextField dateField = createModernTextField();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
+        dateField.setText(event.getEventDate().format(formatter));
+        
+        JTextField locationField = createModernTextField();
+        locationField.setText(event.getLocation());
+        
+        JTextField capacityField = createModernTextField();
+        capacityField.setText(String.valueOf(event.getCapacity()));
+        
+        JComboBox<EventType> typeCombo = new JComboBox<>(EventType.values());
+        typeCombo.setSelectedItem(event.getEventType());
+        typeCombo.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        
+        formPanel.add(createLabel("Title:"));
+        formPanel.add(titleField);
+        formPanel.add(createLabel("Date (MM-DD-YYYY):"));
+        formPanel.add(dateField);
+        formPanel.add(createLabel("Location:"));
+        formPanel.add(locationField);
+        formPanel.add(createLabel("Capacity:"));
+        formPanel.add(capacityField);
+        formPanel.add(createLabel("Type:"));
+        formPanel.add(typeCombo);
+        
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        buttonPanel.setBackground(CARD_BG);
+        
+        JButton cancelBtn = createModernButton("Cancel", TEXT_SECONDARY);
+        cancelBtn.addActionListener(e -> dialog.dispose());
+        
+        JButton saveBtn = createModernButton("Save Changes", PRIMARY_BLUE);
+        saveBtn.addActionListener(e -> {
+            try {
+                DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
+                event.setTitle(titleField.getText());
+                event.setEventDate(LocalDate.parse(dateField.getText(), inputFormatter));
+                event.setLocation(locationField.getText());
+                event.setCapacity(Integer.parseInt(capacityField.getText()));
+                event.setEventType((EventType) typeCombo.getSelectedItem());
+                event.setLastModifiedBy(authService.getCurrentUser().getUsername());
+                event.setLastModifiedDate(LocalDateTime.now());
+                
+                eventController.update(event);
+                JOptionPane.showMessageDialog(dialog, 
+                    "Event updated successfully!",
+                    "Success", JOptionPane.INFORMATION_MESSAGE);
+                dialog.dispose();
+                refreshAllPanels();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(dialog, 
+                    "Error: " + ex.getMessage(), 
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        
+        buttonPanel.add(cancelBtn);
+        buttonPanel.add(saveBtn);
+        
+        mainPanel.add(formPanel, BorderLayout.CENTER);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        dialog.add(mainPanel);
+        dialog.setVisible(true);
+    }
+    
+    private void deleteEvent(int eventId) {
+        if (eventController.delete(eventId)) {
+            JOptionPane.showMessageDialog(this, "Event deleted successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+            refreshAllPanels();
+        } else {
+            JOptionPane.showMessageDialog(this, "Failed to delete event!", "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
     
     private void refreshEventPanel() {
@@ -1104,6 +1395,20 @@ public class SystemUI extends JFrame {
         submitBtn.addActionListener(e -> showSubmitTimesheetDialog(vol.getId()));
         buttonPanel.add(submitBtn);
         
+        // Add Edit button for admin
+        if (authService.getCurrentUser().getRole() == Role.SUPER_ADMIN || 
+            authService.getCurrentUser().getRole() == Role.ADMIN) {
+            JButton editBtn = new JButton("Edit");
+            editBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            editBtn.setForeground(PRIMARY_BLUE);
+            editBtn.setBackground(Color.WHITE);
+            editBtn.setBorder(BorderFactory.createLineBorder(PRIMARY_BLUE, 1));
+            editBtn.setFocusPainted(false);
+            editBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            editBtn.addActionListener(e -> showEditTimesheetDialog(vol.getId()));
+            buttonPanel.add(editBtn);
+        }
+        
         card.add(buttonPanel, BorderLayout.SOUTH);
         
         return card;
@@ -1218,6 +1523,42 @@ public class SystemUI extends JFrame {
         
         card.add(contentPanel, BorderLayout.CENTER);
         
+        // Action buttons
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
+        buttonPanel.setBackground(CARD_BG);
+        
+        JButton editBtn = new JButton("Edit");
+        editBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        editBtn.setForeground(PRIMARY_BLUE);
+        editBtn.setBackground(Color.WHITE);
+        editBtn.setBorder(BorderFactory.createLineBorder(PRIMARY_BLUE, 1));
+        editBtn.setFocusPainted(false);
+        editBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        editBtn.addActionListener(e -> showEditAnnouncementDialog(ann.getAnnouncementId()));
+        
+        JButton deleteBtn = new JButton("Delete");
+        deleteBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        deleteBtn.setForeground(new Color(239, 68, 68));
+        deleteBtn.setBackground(Color.WHITE);
+        deleteBtn.setBorder(BorderFactory.createLineBorder(new Color(239, 68, 68), 1));
+        deleteBtn.setFocusPainted(false);
+        deleteBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        deleteBtn.addActionListener(e -> {
+            int confirm = JOptionPane.showConfirmDialog(this,
+                "Are you sure you want to delete announcement: " + ann.getTitle() + "?",
+                "Confirm Delete",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE);
+            if (confirm == JOptionPane.YES_OPTION) {
+                deleteAnnouncement(ann.getAnnouncementId());
+            }
+        });
+        
+        buttonPanel.add(editBtn);
+        buttonPanel.add(deleteBtn);
+        
+        card.add(buttonPanel, BorderLayout.SOUTH);
+        
         return card;
     }
     
@@ -1308,6 +1649,113 @@ public class SystemUI extends JFrame {
         dialog.setVisible(true);
     }
     
+    private void showEditAnnouncementDialog(int announcementId) {
+        Announcement announcement = announcementController.get(announcementId);
+        if (announcement == null) {
+            JOptionPane.showMessageDialog(this, "Announcement not found!", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
+        JDialog dialog = new JDialog(this, "Edit Announcement", true);
+        dialog.setSize(500, 350);
+        dialog.setLocationRelativeTo(this);
+        
+        JPanel mainPanel = new JPanel(new BorderLayout(15, 15));
+        mainPanel.setBackground(CARD_BG);
+        mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        
+        JPanel formPanel = new JPanel(new BorderLayout(10, 10));
+        formPanel.setBackground(CARD_BG);
+        
+        JTextField titleField = createModernTextField();
+        titleField.setText(announcement.getTitle());
+        
+        JTextArea messageArea = new JTextArea(5, 30);
+        messageArea.setText(announcement.getMessage());
+        messageArea.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        messageArea.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(209, 213, 219), 1),
+            new EmptyBorder(8, 10, 8, 10)
+        ));
+        messageArea.setLineWrap(true);
+        messageArea.setWrapStyleWord(true);
+        JScrollPane messageScroll = new JScrollPane(messageArea);
+        messageScroll.setBorder(messageArea.getBorder());
+        
+        JComboBox<Priority> priorityCombo = new JComboBox<>(Priority.values());
+        priorityCombo.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        priorityCombo.setSelectedItem(announcement.getPriority());
+        
+        JPanel titlePanel = new JPanel(new BorderLayout(5, 5));
+        titlePanel.setBackground(CARD_BG);
+        titlePanel.add(createLabel("Title:"), BorderLayout.NORTH);
+        titlePanel.add(titleField, BorderLayout.CENTER);
+        
+        JPanel messagePanel = new JPanel(new BorderLayout(5, 5));
+        messagePanel.setBackground(CARD_BG);
+        messagePanel.add(createLabel("Message:"), BorderLayout.NORTH);
+        messagePanel.add(messageScroll, BorderLayout.CENTER);
+        
+        JPanel priorityPanel = new JPanel(new BorderLayout(5, 5));
+        priorityPanel.setBackground(CARD_BG);
+        priorityPanel.add(createLabel("Priority:"), BorderLayout.NORTH);
+        priorityPanel.add(priorityCombo, BorderLayout.CENTER);
+        
+        JPanel topPanel = new JPanel(new BorderLayout(10, 10));
+        topPanel.setBackground(CARD_BG);
+        topPanel.add(titlePanel, BorderLayout.NORTH);
+        topPanel.add(priorityPanel, BorderLayout.CENTER);
+        
+        formPanel.add(topPanel, BorderLayout.NORTH);
+        formPanel.add(messagePanel, BorderLayout.CENTER);
+        
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        buttonPanel.setBackground(CARD_BG);
+        
+        JButton cancelBtn = createModernButton("Cancel", TEXT_SECONDARY);
+        cancelBtn.addActionListener(e -> dialog.dispose());
+        
+        JButton saveBtn = createModernButton("Save Changes", PRIMARY_BLUE);
+        saveBtn.addActionListener(e -> {
+            try {
+                announcement.setTitle(titleField.getText());
+                announcement.setMessage(messageArea.getText());
+                announcement.setPriority((Priority) priorityCombo.getSelectedItem());
+                announcement.setLastModifiedBy(authService.getCurrentUser().getUsername());
+                announcement.setLastModifiedDate(LocalDateTime.now());
+                
+                announcementController.update(announcement);
+                JOptionPane.showMessageDialog(dialog, 
+                    "Announcement updated successfully!",
+                    "Success", JOptionPane.INFORMATION_MESSAGE);
+                dialog.dispose();
+                refreshAllPanels();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(dialog, 
+                    "Error: " + ex.getMessage(), 
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        
+        buttonPanel.add(cancelBtn);
+        buttonPanel.add(saveBtn);
+        
+        mainPanel.add(formPanel, BorderLayout.CENTER);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        dialog.add(mainPanel);
+        dialog.setVisible(true);
+    }
+    
+    private void deleteAnnouncement(int announcementId) {
+        if (announcementController.delete(announcementId)) {
+            JOptionPane.showMessageDialog(this, "Announcement deleted successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+            refreshAllPanels();
+        } else {
+            JOptionPane.showMessageDialog(this, "Failed to delete announcement!", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
     private void refreshAnnouncementPanel() {
         int selectedIndex = tabbedPane.getSelectedIndex();
         tabbedPane.setComponentAt(6, createAnnouncementPanel());
@@ -1365,7 +1813,7 @@ public class SystemUI extends JFrame {
         leaderList.setBackground(CARD_BG);
         
         List<Volunteer> volunteers = volunteerController.listAll();
-        volunteers.sort((a, b) -> Double.compare(b.getTotalHoursWorked(), a.getTotalHoursWorked()));
+        volunteers.sort((a, b) -> Integer.compare(b.getBadgesEarned(), a.getBadgesEarned()));
         
         Color[] medalColors = {new Color(255, 215, 0), new Color(192, 192, 192), new Color(205, 127, 50)};
         int rank = 1;
@@ -1398,7 +1846,7 @@ public class SystemUI extends JFrame {
         card.setBorder(new EmptyBorder(20, 15, 20, 15));
         
         JLabel nameLabel = new JLabel(name);
-        nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        nameLabel.setFont(getEmojiFont(16).deriveFont(Font.BOLD));
         nameLabel.setForeground(Color.WHITE);
         nameLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         
@@ -1446,15 +1894,15 @@ public class SystemUI extends JFrame {
         nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
         nameLabel.setForeground(TEXT_PRIMARY);
         
-        JLabel hoursLabel = new JLabel(String.format("%.1f hours contributed", vol.getTotalHoursWorked()));
-        hoursLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        hoursLabel.setForeground(TEXT_SECONDARY);
+        JLabel badgesLabel = new JLabel(vol.getBadgesEarned() + " badge" + (vol.getBadgesEarned() != 1 ? "s" : "") + " earned");
+        badgesLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        badgesLabel.setForeground(TEXT_SECONDARY);
         
         infoPanel.add(nameLabel);
-        infoPanel.add(hoursLabel);
+        infoPanel.add(badgesLabel);
         
         JLabel trophy = new JLabel("\uD83C\uDFC6"); // 🏆 trophy
-        trophy.setFont(getEmojiFont(24));
+        trophy.setFont(getEmojiFont(28));
         
         item.add(rankLabel, BorderLayout.WEST);
         item.add(infoPanel, BorderLayout.CENTER);
@@ -1532,9 +1980,9 @@ public class SystemUI extends JFrame {
         JComboBox<TimesheetStatus> statusCombo = new JComboBox<>(TimesheetStatus.values());
         statusCombo.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         
-        formPanel.add(createLabel("Start Date (YYYY-MM-DD):"));
+        formPanel.add(createLabel("Start Date (MM-DD-YYYY):"));
         formPanel.add(startDateField);
-        formPanel.add(createLabel("End Date (YYYY-MM-DD):"));
+        formPanel.add(createLabel("End Date (MM-DD-YYYY):"));
         formPanel.add(endDateField);
         formPanel.add(createLabel("Status:"));
         formPanel.add(statusCombo);
@@ -1576,6 +2024,122 @@ public class SystemUI extends JFrame {
         dialog.setVisible(true);
     }
     
+    private void showEditTimesheetDialog(int volunteerId) {
+        // Get existing timesheets for this volunteer
+        List<Timesheet> timesheets = timesheetController.listAll().stream()
+            .filter(ts -> ts.getVolunteerId() == volunteerId)
+            .toList();
+        
+        if (timesheets.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No timesheets found for this volunteer!", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
+        // Let admin select which timesheet to edit
+        String[] options = timesheets.stream()
+            .map(ts -> "ID: " + ts.getTimesheetId() + " | " + ts.getPeriodStartDate() + " to " + ts.getPeriodEndDate() + " | " + ts.getTotalHours() + " hrs")
+            .toArray(String[]::new);
+        
+        String selected = (String) JOptionPane.showInputDialog(
+            this,
+            "Select timesheet to edit:",
+            "Edit Timesheet",
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            options,
+            options[0]
+        );
+        
+        if (selected == null) return;
+        
+        int timesheetId = Integer.parseInt(selected.split(" \\| ")[0].replace("ID: ", ""));
+        Timesheet timesheet = timesheets.stream()
+            .filter(ts -> ts.getTimesheetId() == timesheetId)
+            .findFirst()
+            .orElse(null);
+        
+        if (timesheet == null) return;
+        
+        JDialog dialog = new JDialog(this, "Edit Timesheet", true);
+        dialog.setSize(450, 400);
+        dialog.setLocationRelativeTo(this);
+        
+        JPanel mainPanel = new JPanel(new BorderLayout(15, 15));
+        mainPanel.setBackground(CARD_BG);
+        mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        
+        JPanel formPanel = new JPanel(new GridLayout(5, 2, 10, 15));
+        formPanel.setBackground(CARD_BG);
+        
+        JTextField idField = createModernTextField();
+        idField.setText(String.valueOf(timesheet.getTimesheetId()));
+        idField.setEditable(false);
+        
+        JTextField startDateField = createModernTextField();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
+        startDateField.setText(timesheet.getPeriodStartDate().format(formatter));
+        
+        JTextField endDateField = createModernTextField();
+        endDateField.setText(timesheet.getPeriodEndDate().format(formatter));
+        
+        JTextField totalHoursField = createModernTextField();
+        totalHoursField.setText(String.valueOf(timesheet.getTotalHours()));
+        
+        JComboBox<TimesheetStatus> statusCombo = new JComboBox<>(TimesheetStatus.values());
+        statusCombo.setSelectedItem(timesheet.getApprovalStatus());
+        statusCombo.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        
+        formPanel.add(createLabel("Timesheet ID:"));
+        formPanel.add(idField);
+        formPanel.add(createLabel("Start Date (MM-DD-YYYY):"));
+        formPanel.add(startDateField);
+        formPanel.add(createLabel("End Date (MM-DD-YYYY):"));
+        formPanel.add(endDateField);
+        formPanel.add(createLabel("Total Hours:"));
+        formPanel.add(totalHoursField);
+        formPanel.add(createLabel("Status:"));
+        formPanel.add(statusCombo);
+        
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        buttonPanel.setBackground(CARD_BG);
+        
+        JButton cancelBtn = createModernButton("Cancel", TEXT_SECONDARY);
+        cancelBtn.addActionListener(e -> dialog.dispose());
+        
+        JButton saveBtn = createModernButton("Save Changes", PRIMARY_BLUE);
+        saveBtn.addActionListener(e -> {
+            try {
+                DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
+                timesheet.setPeriodStartDate(LocalDate.parse(startDateField.getText(), inputFormatter));
+                timesheet.setPeriodEndDate(LocalDate.parse(endDateField.getText(), inputFormatter));
+                timesheet.setTotalHours(Double.parseDouble(totalHoursField.getText()));
+                timesheet.setApprovalStatus((TimesheetStatus) statusCombo.getSelectedItem());
+                timesheet.setLastModifiedBy(authService.getCurrentUser().getUsername());
+                timesheet.setLastModifiedDate(LocalDateTime.now());
+                
+                timesheetController.update(timesheet);
+                JOptionPane.showMessageDialog(dialog, 
+                    "Timesheet updated successfully!",
+                    "Success", JOptionPane.INFORMATION_MESSAGE);
+                dialog.dispose();
+                refreshAllPanels();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(dialog, 
+                    "Error: " + ex.getMessage(), 
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        
+        buttonPanel.add(cancelBtn);
+        buttonPanel.add(saveBtn);
+        
+        mainPanel.add(formPanel, BorderLayout.CENTER);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        dialog.add(mainPanel);
+        dialog.setVisible(true);
+    }
+    
     private void showCreateTimesheetDialog() {
         JDialog dialog = new JDialog(this, "Create Timesheet for Volunteer", true);
         dialog.setSize(450, 350);
@@ -1605,9 +2169,9 @@ public class SystemUI extends JFrame {
         
         formPanel.add(createLabel("Volunteer:"));
         formPanel.add(volunteerCombo);
-        formPanel.add(createLabel("Start Date (YYYY-MM-DD):"));
+        formPanel.add(createLabel("Start Date (MM-DD-YYYY):"));
         formPanel.add(startDateField);
-        formPanel.add(createLabel("End Date (YYYY-MM-DD):"));
+        formPanel.add(createLabel("End Date (MM-DD-YYYY):"));
         formPanel.add(endDateField);
         formPanel.add(createLabel("Status:"));
         formPanel.add(statusCombo);

@@ -4,6 +4,7 @@ import com.fstgc.vms.model.enums.EventStatus;
 import com.fstgc.vms.model.enums.EventType;
 import java.io.Serializable;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 public class Event implements Serializable {
@@ -20,6 +21,8 @@ public class Event implements Serializable {
     private EventType eventType;
     private EventStatus status = EventStatus.DRAFT;
     private int createdByAdminId;
+    private String lastModifiedBy;
+    private LocalDateTime lastModifiedDate;
 
     public int getEventId() { return eventId; }
     public void setEventId(int eventId) { this.eventId = eventId; }
@@ -45,4 +48,8 @@ public class Event implements Serializable {
     public void setStatus(EventStatus status) { this.status = status; }
     public int getCreatedByAdminId() { return createdByAdminId; }
     public void setCreatedByAdminId(int createdByAdminId) { this.createdByAdminId = createdByAdminId; }
+    public String getLastModifiedBy() { return lastModifiedBy; }
+    public void setLastModifiedBy(String lastModifiedBy) { this.lastModifiedBy = lastModifiedBy; }
+    public LocalDateTime getLastModifiedDate() { return lastModifiedDate; }
+    public void setLastModifiedDate(LocalDateTime lastModifiedDate) { this.lastModifiedDate = lastModifiedDate; }
 }

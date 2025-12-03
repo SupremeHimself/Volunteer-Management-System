@@ -15,6 +15,8 @@ public class Attendance implements Serializable {
     private double hoursWorked; // calculated
     private Integer recordedByAdminId; // nullable
     private String notes; // nullable
+    private String lastModifiedBy;
+    private LocalDateTime lastModifiedDate;
 
     public int getAttendanceId() { return attendanceId; }
     public void setAttendanceId(int attendanceId) { this.attendanceId = attendanceId; }
@@ -34,4 +36,8 @@ public class Attendance implements Serializable {
     public void setRecordedByAdminId(Integer recordedByAdminId) { this.recordedByAdminId = recordedByAdminId; }
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
+    public String getLastModifiedBy() { return lastModifiedBy; }
+    public void setLastModifiedBy(String lastModifiedBy) { this.lastModifiedBy = lastModifiedBy; }
+    public LocalDateTime getLastModifiedDate() { return lastModifiedDate; }
+    public void setLastModifiedDate(LocalDateTime lastModifiedDate) { this.lastModifiedDate = lastModifiedDate; }
 }

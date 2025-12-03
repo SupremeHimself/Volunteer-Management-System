@@ -21,9 +21,10 @@ public class InMemoryAdminRepository implements AdminRepository {
 
     @Override
     public Optional<SystemAdmin> findByUsername(String username) {
-        // Search by email since username isn't a field in SystemAdmin
+        // Search by username or email
         return store.values().stream()
-                .filter(a -> username.equalsIgnoreCase(a.getEmail()))
+                .filter(a -> username.equalsIgnoreCase(a.getUsername()) || 
+                            username.equalsIgnoreCase(a.getEmail()))
                 .findFirst();
     }
 
