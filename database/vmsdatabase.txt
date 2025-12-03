@@ -1,5 +1,18 @@
 {
-  "volunteers": {},
+  "volunteers": {
+    "1": {
+      "registrationDate": "2025-12-02T23:44:37.9685926",
+      "status": "ACTIVE",
+      "lastModifiedBy": "csharpe",
+      "lastModifiedDate": "2025-12-02T23:44:37.9685926",
+      "badgesEarned": 0,
+      "id": 1,
+      "firstName": "Carl",
+      "lastName": "Sharpe",
+      "email": "carlsharpe@test.com",
+      "phone": "18761234567"
+    }
+  },
   "events": {
     "1": {
       "eventId": 1,
@@ -32,7 +45,7 @@
       "username": "admin",
       "passwordHash": "JAvlGPq9JyTdtvBO6x2llnRI1+gxwIyPqCKAn3THIKk\u003d",
       "role": "SUPER_ADMIN",
-      "lastLogin": "2025-12-02T23:38:48.2804942",
+      "lastLogin": "2025-12-03T00:02:27.2820688",
       "failedLoginAttempts": 0,
       "accountStatus": "ACTIVE",
       "createdDate": "2025-12-02T21:50:19.3207691",
@@ -41,6 +54,20 @@
       "lastName": "Administrator",
       "email": "admin@vms.com",
       "phone": "555-0100"
+    },
+    "2": {
+      "username": "csharpe",
+      "passwordHash": "75K3eLr+dx6JJFuJ7LwIpEpOFmwGZZkRiB84PURz6U8\u003d",
+      "role": "VOLUNTEER",
+      "lastLogin": "2025-12-03T00:12:07.5019647",
+      "failedLoginAttempts": 0,
+      "accountStatus": "ACTIVE",
+      "createdDate": "2025-12-02T23:43:47.4293635",
+      "id": 2,
+      "firstName": "Carl",
+      "lastName": "Sharpe",
+      "email": "carl.sharpe@test.com",
+      "phone": "18761234567"
     }
   }
 }

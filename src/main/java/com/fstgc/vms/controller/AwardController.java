@@ -10,4 +10,8 @@ public class AwardController {
     public AwardController(AwardService service) { this.service = service; }
 
     public Award assign(int volunteerId, AwardCriteria criteria) { return service.assignIfEligible(volunteerId, criteria); }
+    
+    public java.util.List<Award> getAwardsByVolunteer(int volunteerId) {
+        return service.getAwardsByVolunteer(volunteerId);
+    }
 }

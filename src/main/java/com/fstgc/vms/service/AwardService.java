@@ -23,6 +23,10 @@ public class AwardService {
         a.setBadgeTier(criteria.getBadgeTier()!=null ? criteria.getBadgeTier() : BadgeTier.BRONZE);
         return repository.save(a);
     }
+    
+    public List<Award> getAwardsByVolunteer(int volunteerId) {
+        return repository.findByVolunteer(volunteerId);
+    }
 
     public List<Award> leaderboard() { return repository.findLeaderboard(); }
 }

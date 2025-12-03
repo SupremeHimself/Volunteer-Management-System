@@ -29,6 +29,7 @@ public class SystemUI extends JFrame {
     private final AttendanceController attendanceController;
     private final TimesheetController timesheetController;
     private final AnnouncementController announcementController;
+    private final AwardController awardController;
     private final AuthenticationService authService;
 
     private JTabbedPane tabbedPane;
@@ -56,12 +57,14 @@ public class SystemUI extends JFrame {
         AttendanceService attendanceService = new AttendanceService(new InMemoryAttendanceRepository(), eventRepository);
         TimesheetService timesheetService = new TimesheetService(new InMemoryTimesheetRepository(), new InMemoryAttendanceRepository());
         AnnouncementService announcementService = new AnnouncementService(new InMemoryAnnouncementRepository());
+        AwardService awardService = new AwardService(new InMemoryAwardRepository());
 
         this.volunteerController = new VolunteerController(volunteerService);
         this.eventController = new EventController(eventService);
         this.attendanceController = new AttendanceController(attendanceService);
         this.timesheetController = new TimesheetController(timesheetService);
         this.announcementController = new AnnouncementController(announcementService);
+        this.awardController = new AwardController(awardService);
 
         initializeUI();
     }
@@ -234,12 +237,44 @@ public class SystemUI extends JFrame {
         
         List<Volunteer> volunteers = volunteerController.listAll();
         List<com.fstgc.vms.model.Event> events = eventController.listAll();
-        int totalHours = volunteers.stream().mapToInt(v -> (int)v.getTotalHoursWorked()).sum();
+        
+        // Check user role to determine what stats to show
+        Role currentRole = authService.getCurrentUser().getRole();
+        boolean isAdmin = (currentRole == Role.ADMIN || currentRole == Role.SUPER_ADMIN);
+        
+        int displayHours;
+        int displayBadges;
+        String hoursLabel;
+        String badgesLabel;
+        
+        if (isAdmin) {
+            // Admins see system-wide totals for ALL users
+            displayHours = volunteers.stream().mapToInt(v -> (int)v.getTotalHoursWorked()).sum();
+            displayBadges = volunteers.stream().mapToInt(v -> getBadgesEarnedCount(v.getId())).sum();
+            hoursLabel = "Total Hours (All Users)";
+            badgesLabel = "Total Badges (All Users)";
+        } else {
+            // Volunteers and Coordinators see their personal stats
+            Volunteer currentVol = volunteerController.listAll().stream()
+                .filter(v -> v.getEmail().equals(authService.getCurrentUser().getEmail()))
+                .findFirst()
+                .orElse(null);
+            
+            if (currentVol != null) {
+                displayHours = (int) currentVol.getTotalHoursWorked();
+                displayBadges = getBadgesEarnedCount(currentVol.getId());
+            } else {
+                displayHours = 0;
+                displayBadges = 0;
+            }
+            hoursLabel = "My Hours";
+            badgesLabel = "My Badges";
+        }
         
         statsPanel.add(createStatCard("Active Volunteers", String.valueOf(volunteers.size()), PRIMARY_BLUE, "👥", 1));
         statsPanel.add(createStatCard("Upcoming Events", String.valueOf(events.size()), GREEN, "📅", 2));
-        statsPanel.add(createStatCard("Total Hours", String.valueOf(totalHours), PURPLE, "⏰", 4));
-        statsPanel.add(createStatCard("Badges Earned", "12", ORANGE, "🏆", 5));
+        statsPanel.add(createStatCard(hoursLabel, String.valueOf(displayHours), PURPLE, "⏰", 4));
+        statsPanel.add(createStatCard(badgesLabel, String.valueOf(displayBadges), ORANGE, "🏆", 5));
         
         contentPanel.add(statsPanel);
         contentPanel.add(Box.createVerticalStrut(20));
@@ -849,6 +884,11 @@ public class SystemUI extends JFrame {
         // Final fallback to Dialog which often works on Windows
         return new Font("Dialog", Font.PLAIN, size);
     }
+    
+    private int getBadgesEarnedCount(int volunteerId) {
+        // Get actual badge count from award records
+        return awardController.getAwardsByVolunteer(volunteerId).size();
+    }
 
     private JPanel createEventPanel() {
         JPanel panel = new JPanel(new BorderLayout(15, 15));
@@ -863,24 +903,90 @@ public class SystemUI extends JFrame {
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 28));
         titleLabel.setForeground(TEXT_PRIMARY);
         
-        JButton addBtn = createModernButton("+ Create Event", GREEN);
-        addBtn.addActionListener(e -> showAddEventDialog());
-        
         headerPanel.add(titleLabel, BorderLayout.WEST);
-        headerPanel.add(addBtn, BorderLayout.EAST);
+        
+        // Only admins can create events
+        Role currentRole = authService.getCurrentUser().getRole();
+        if (currentRole == Role.ADMIN || currentRole == Role.SUPER_ADMIN) {
+            JButton addBtn = createModernButton("+ Create Event", GREEN);
+            addBtn.addActionListener(e -> showAddEventDialog());
+            headerPanel.add(addBtn, BorderLayout.EAST);
+        }
         
         panel.add(headerPanel, BorderLayout.NORTH);
 
-        // Events grid
-        JPanel eventsGrid = new JPanel(new GridLayout(0, 3, 15, 15));
-        eventsGrid.setBackground(GRAY_BG);
+        // Main content panel with both sections
+        JPanel contentPanel = new JPanel();
+        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
+        contentPanel.setBackground(GRAY_BG);
         
-        List<com.fstgc.vms.model.Event> events = eventController.listAll();
-        for (com.fstgc.vms.model.Event event : events) {
-            eventsGrid.add(createEventCard(event));
+        // Get all events and separate them
+        List<com.fstgc.vms.model.Event> allEvents = eventController.listAll();
+        LocalDate today = LocalDate.now();
+        
+        List<com.fstgc.vms.model.Event> upcomingEvents = allEvents.stream()
+            .filter(e -> !e.getEventDate().isBefore(today))
+            .sorted((e1, e2) -> e1.getEventDate().compareTo(e2.getEventDate()))
+            .toList();
+            
+        List<com.fstgc.vms.model.Event> pastEvents = allEvents.stream()
+            .filter(e -> e.getEventDate().isBefore(today))
+            .sorted((e1, e2) -> e2.getEventDate().compareTo(e1.getEventDate())) // Most recent first
+            .toList();
+        
+        // Upcoming Events Section
+        JLabel upcomingLabel = new JLabel("📅 Upcoming Events");
+        upcomingLabel.setFont(getEmojiFont(20).deriveFont(Font.BOLD));
+        upcomingLabel.setForeground(TEXT_PRIMARY);
+        upcomingLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        upcomingLabel.setBorder(new EmptyBorder(0, 0, 10, 0));
+        contentPanel.add(upcomingLabel);
+        
+        if (upcomingEvents.isEmpty()) {
+            JLabel noUpcomingLabel = new JLabel("No upcoming events scheduled");
+            noUpcomingLabel.setFont(new Font("Segoe UI", Font.ITALIC, 14));
+            noUpcomingLabel.setForeground(TEXT_SECONDARY);
+            noUpcomingLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            noUpcomingLabel.setBorder(new EmptyBorder(10, 10, 10, 10));
+            contentPanel.add(noUpcomingLabel);
+        } else {
+            JPanel upcomingGrid = new JPanel(new GridLayout(0, 3, 15, 15));
+            upcomingGrid.setBackground(GRAY_BG);
+            upcomingGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
+            for (com.fstgc.vms.model.Event event : upcomingEvents) {
+                upcomingGrid.add(createEventCard(event));
+            }
+            contentPanel.add(upcomingGrid);
         }
         
-        JScrollPane scrollPane = new JScrollPane(eventsGrid);
+        contentPanel.add(Box.createVerticalStrut(30));
+        
+        // Past Events Section
+        JLabel pastLabel = new JLabel("📚 Past Events");
+        pastLabel.setFont(getEmojiFont(20).deriveFont(Font.BOLD));
+        pastLabel.setForeground(TEXT_PRIMARY);
+        pastLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        pastLabel.setBorder(new EmptyBorder(0, 0, 10, 0));
+        contentPanel.add(pastLabel);
+        
+        if (pastEvents.isEmpty()) {
+            JLabel noPastLabel = new JLabel("No past events");
+            noPastLabel.setFont(new Font("Segoe UI", Font.ITALIC, 14));
+            noPastLabel.setForeground(TEXT_SECONDARY);
+            noPastLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            noPastLabel.setBorder(new EmptyBorder(10, 10, 10, 10));
+            contentPanel.add(noPastLabel);
+        } else {
+            JPanel pastGrid = new JPanel(new GridLayout(0, 3, 15, 15));
+            pastGrid.setBackground(GRAY_BG);
+            pastGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
+            for (com.fstgc.vms.model.Event event : pastEvents) {
+                pastGrid.add(createEventCard(event));
+            }
+            contentPanel.add(pastGrid);
+        }
+        
+        JScrollPane scrollPane = new JScrollPane(contentPanel);
         scrollPane.setBorder(null);
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         scrollPane.setBackground(GRAY_BG);
@@ -951,41 +1057,44 @@ public class SystemUI extends JFrame {
         
         card.add(contentPanel, BorderLayout.CENTER);
         
-        // Action buttons
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
-        buttonPanel.setBackground(CARD_BG);
-        
-        JButton editBtn = new JButton("Edit");
-        editBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        editBtn.setForeground(PRIMARY_BLUE);
-        editBtn.setBackground(Color.WHITE);
-        editBtn.setBorder(BorderFactory.createLineBorder(PRIMARY_BLUE, 1));
-        editBtn.setFocusPainted(false);
-        editBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        editBtn.addActionListener(e -> showEditEventDialog(event.getEventId()));
-        
-        JButton deleteBtn = new JButton("Delete");
-        deleteBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        deleteBtn.setForeground(new Color(239, 68, 68));
-        deleteBtn.setBackground(Color.WHITE);
-        deleteBtn.setBorder(BorderFactory.createLineBorder(new Color(239, 68, 68), 1));
-        deleteBtn.setFocusPainted(false);
-        deleteBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        deleteBtn.addActionListener(e -> {
-            int confirm = JOptionPane.showConfirmDialog(this,
-                "Are you sure you want to delete event: " + event.getTitle() + "?",
-                "Confirm Delete",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE);
-            if (confirm == JOptionPane.YES_OPTION) {
-                deleteEvent(event.getEventId());
-            }
-        });
-        
-        buttonPanel.add(editBtn);
-        buttonPanel.add(deleteBtn);
-        
-        card.add(buttonPanel, BorderLayout.SOUTH);
+        // Action buttons - only for admins
+        Role currentRole = authService.getCurrentUser().getRole();
+        if (currentRole == Role.ADMIN || currentRole == Role.SUPER_ADMIN) {
+            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
+            buttonPanel.setBackground(CARD_BG);
+            
+            JButton editBtn = new JButton("Edit");
+            editBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            editBtn.setForeground(PRIMARY_BLUE);
+            editBtn.setBackground(Color.WHITE);
+            editBtn.setBorder(BorderFactory.createLineBorder(PRIMARY_BLUE, 1));
+            editBtn.setFocusPainted(false);
+            editBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            editBtn.addActionListener(e -> showEditEventDialog(event.getEventId()));
+            
+            JButton deleteBtn = new JButton("Delete");
+            deleteBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            deleteBtn.setForeground(new Color(239, 68, 68));
+            deleteBtn.setBackground(Color.WHITE);
+            deleteBtn.setBorder(BorderFactory.createLineBorder(new Color(239, 68, 68), 1));
+            deleteBtn.setFocusPainted(false);
+            deleteBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            deleteBtn.addActionListener(e -> {
+                int confirm = JOptionPane.showConfirmDialog(this,
+                    "Are you sure you want to delete event: " + event.getTitle() + "?",
+                    "Confirm Delete",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
+                if (confirm == JOptionPane.YES_OPTION) {
+                    deleteEvent(event.getEventId());
+                }
+            });
+            
+            buttonPanel.add(editBtn);
+            buttonPanel.add(deleteBtn);
+            
+            card.add(buttonPanel, BorderLayout.SOUTH);
+        }
         
         return card;
     }
@@ -1251,7 +1360,26 @@ public class SystemUI extends JFrame {
         JPanel formPanel = new JPanel(new GridLayout(3, 2, 10, 15));
         formPanel.setBackground(CARD_BG);
         
+        // Check user role to determine if volunteer ID should be auto-populated
+        Role currentRole = authService.getCurrentUser().getRole();
+        boolean isAdmin = (currentRole == Role.ADMIN || currentRole == Role.SUPER_ADMIN);
+        
         JTextField volunteerIdField = createModernTextField();
+        
+        // Auto-populate volunteer ID for volunteers and coordinators
+        if (!isAdmin) {
+            Volunteer currentVol = volunteerController.listAll().stream()
+                .filter(v -> v.getEmail().equals(authService.getCurrentUser().getEmail()))
+                .findFirst()
+                .orElse(null);
+            
+            if (currentVol != null) {
+                volunteerIdField.setText(String.valueOf(currentVol.getId()));
+                volunteerIdField.setEditable(false);
+                volunteerIdField.setBackground(new Color(240, 240, 240));
+            }
+        }
+        
         JTextField eventIdField = createModernTextField();
         JTextField attendanceIdField = createModernTextField();
         
@@ -1397,7 +1525,11 @@ public class SystemUI extends JFrame {
         statsPanel.add(hoursLabel);
         
         statsPanel.add(createLabel("Events Attended:"));
-        JLabel eventsLabel = new JLabel("3");
+        // Count actual events attended from attendance records
+        int eventsAttended = (int) attendanceController.byVolunteer(vol.getId()).stream()
+            .filter(a -> a.getCheckInTime() != null)
+            .count();
+        JLabel eventsLabel = new JLabel(String.valueOf(eventsAttended));
         eventsLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
         statsPanel.add(eventsLabel);
         
@@ -1451,11 +1583,15 @@ public class SystemUI extends JFrame {
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 28));
         titleLabel.setForeground(TEXT_PRIMARY);
         
-        JButton addBtn = createModernButton("+ New Announcement", ORANGE);
-        addBtn.addActionListener(e -> showAddAnnouncementDialog());
-        
         headerPanel.add(titleLabel, BorderLayout.WEST);
-        headerPanel.add(addBtn, BorderLayout.EAST);
+        
+        // Only admins can create announcements
+        Role currentRole = authService.getCurrentUser().getRole();
+        if (currentRole == Role.ADMIN || currentRole == Role.SUPER_ADMIN) {
+            JButton addBtn = createModernButton("+ New Announcement", ORANGE);
+            addBtn.addActionListener(e -> showAddAnnouncementDialog());
+            headerPanel.add(addBtn, BorderLayout.EAST);
+        }
         
         panel.add(headerPanel, BorderLayout.NORTH);
 
@@ -1814,10 +1950,24 @@ public class SystemUI extends JFrame {
         JPanel badgesGrid = new JPanel(new GridLayout(1, 4, 15, 0));
         badgesGrid.setBackground(CARD_BG);
         
-        badgesGrid.add(createBadgeCard("🥉 Bronze", "10+ hours", new Color(205, 127, 50), 15));
-        badgesGrid.add(createBadgeCard("🥈 Silver", "50+ hours", new Color(192, 192, 192), 8));
-        badgesGrid.add(createBadgeCard("🥇 Gold", "100+ hours", new Color(255, 215, 0), 3));
-        badgesGrid.add(createBadgeCard("💎 Platinum", "200+ hours", PRIMARY_BLUE, 1));
+        // Calculate actual badge counts by tier from all volunteers
+        int bronzeCount = 0, silverCount = 0, goldCount = 0, platinumCount = 0;
+        for (Volunteer vol : volunteerController.listAll()) {
+            List<com.fstgc.vms.model.Award> awards = awardController.getAwardsByVolunteer(vol.getId());
+            for (com.fstgc.vms.model.Award award : awards) {
+                switch (award.getBadgeTier()) {
+                    case BRONZE: bronzeCount++; break;
+                    case SILVER: silverCount++; break;
+                    case GOLD: goldCount++; break;
+                    case PLATINUM: platinumCount++; break;
+                }
+            }
+        }
+        
+        badgesGrid.add(createBadgeCard("🥉 Bronze", "10+ hours", new Color(205, 127, 50), bronzeCount));
+        badgesGrid.add(createBadgeCard("🥈 Silver", "50+ hours", new Color(192, 192, 192), silverCount));
+        badgesGrid.add(createBadgeCard("🥇 Gold", "100+ hours", new Color(255, 215, 0), goldCount));
+        badgesGrid.add(createBadgeCard("💎 Platinum", "200+ hours", PRIMARY_BLUE, platinumCount));
         
         badgesCard.add(badgesGrid, BorderLayout.CENTER);
         contentPanel.add(badgesCard);
@@ -1837,7 +1987,7 @@ public class SystemUI extends JFrame {
         leaderList.setBackground(CARD_BG);
         
         List<Volunteer> volunteers = volunteerController.listAll();
-        volunteers.sort((a, b) -> Integer.compare(b.getBadgesEarned(), a.getBadgesEarned()));
+        volunteers.sort((a, b) -> Integer.compare(getBadgesEarnedCount(b.getId()), getBadgesEarnedCount(a.getId())));
         
         Color[] medalColors = {new Color(255, 215, 0), new Color(192, 192, 192), new Color(205, 127, 50)};
         int rank = 1;
@@ -1918,7 +2068,8 @@ public class SystemUI extends JFrame {
         nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
         nameLabel.setForeground(TEXT_PRIMARY);
         
-        JLabel badgesLabel = new JLabel(vol.getBadgesEarned() + " badge" + (vol.getBadgesEarned() != 1 ? "s" : "") + " earned");
+        int badgeCount = getBadgesEarnedCount(vol.getId());
+        JLabel badgesLabel = new JLabel(badgeCount + " badge" + (badgeCount != 1 ? "s" : "") + " earned");
         badgesLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         badgesLabel.setForeground(TEXT_SECONDARY);
         
@@ -1994,22 +2145,36 @@ public class SystemUI extends JFrame {
         mainPanel.setBackground(CARD_BG);
         mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
         
-        JPanel formPanel = new JPanel(new GridLayout(3, 2, 10, 15));
+        // Check user role to determine if status field should be shown
+        Role currentRole = authService.getCurrentUser().getRole();
+        boolean canChangeStatus = (currentRole == Role.ADMIN || currentRole == Role.SUPER_ADMIN);
+        
+        // Adjust grid rows based on permission
+        int gridRows = canChangeStatus ? 3 : 2;
+        JPanel formPanel = new JPanel(new GridLayout(gridRows, 2, 10, 15));
         formPanel.setBackground(CARD_BG);
         
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
         JTextField startDateField = createModernTextField();
-        startDateField.setText(LocalDate.now().withDayOfMonth(1).toString());
+        startDateField.setText(LocalDate.now().withDayOfMonth(1).format(formatter));
         JTextField endDateField = createModernTextField();
-        endDateField.setText(LocalDate.now().toString());
+        endDateField.setText(LocalDate.now().format(formatter));
+        
+        // Default status is always PENDING
         JComboBox<TimesheetStatus> statusCombo = new JComboBox<>(TimesheetStatus.values());
+        statusCombo.setSelectedItem(TimesheetStatus.PENDING);
         statusCombo.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         
         formPanel.add(createLabel("Start Date (MM-DD-YYYY):"));
         formPanel.add(startDateField);
         formPanel.add(createLabel("End Date (MM-DD-YYYY):"));
         formPanel.add(endDateField);
-        formPanel.add(createLabel("Status:"));
-        formPanel.add(statusCombo);
+        
+        // Only show status field to admins
+        if (canChangeStatus) {
+            formPanel.add(createLabel("Status:"));
+            formPanel.add(statusCombo);
+        }
         
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         buttonPanel.setBackground(CARD_BG);
@@ -2021,11 +2186,16 @@ public class SystemUI extends JFrame {
         submitBtn.addActionListener(e -> {
             try {
                 DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
+                // Volunteers and coordinators can only submit as PENDING
+                TimesheetStatus status = canChangeStatus ? 
+                    (TimesheetStatus) statusCombo.getSelectedItem() : 
+                    TimesheetStatus.PENDING;
+                    
                 Timesheet ts = timesheetController.submit(
                     volunteerId,
                     LocalDate.parse(startDateField.getText(), inputFormatter),
                     LocalDate.parse(endDateField.getText(), inputFormatter),
-                    (TimesheetStatus) statusCombo.getSelectedItem()
+                    status
                 );
                 JOptionPane.showMessageDialog(dialog, 
                     "Timesheet submitted successfully!\\nID: " + ts.getTimesheetId() + "\\nTotal Hours: " + ts.getTotalHours(),
@@ -2114,6 +2284,11 @@ public class SystemUI extends JFrame {
         statusCombo.setSelectedItem(timesheet.getApprovalStatus());
         statusCombo.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         
+        // Only admins can change status
+        Role currentRole = authService.getCurrentUser().getRole();
+        boolean canChangeStatus = (currentRole == Role.ADMIN || currentRole == Role.SUPER_ADMIN);
+        statusCombo.setEnabled(canChangeStatus);
+        
         formPanel.add(createLabel("Timesheet ID:"));
         formPanel.add(idField);
         formPanel.add(createLabel("Start Date (MM-DD-YYYY):"));
@@ -2190,7 +2365,10 @@ public class SystemUI extends JFrame {
         startDateField.setText(LocalDate.now().withDayOfMonth(1).format(formatter));
         JTextField endDateField = createModernTextField();
         endDateField.setText(LocalDate.now().format(formatter));
+        
+        // Default status to PENDING (admins only have access to this dialog anyway)
         JComboBox<TimesheetStatus> statusCombo = new JComboBox<>(TimesheetStatus.values());
+        statusCombo.setSelectedItem(TimesheetStatus.PENDING);
         statusCombo.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         
         formPanel.add(createLabel("Volunteer:"));

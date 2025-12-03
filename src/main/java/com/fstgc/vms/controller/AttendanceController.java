@@ -21,5 +21,9 @@ public class AttendanceController {
         return service.updateStatus(attendanceId, status);
     }
     
+    public java.util.List<Attendance> byVolunteer(int volunteerId) {
+        return service.byVolunteer(volunteerId);
+    }
+    
     public java.util.List<Attendance> listAll() { return service.listAll(); }
 }
