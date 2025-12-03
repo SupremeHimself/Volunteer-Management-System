@@ -1020,6 +1020,7 @@ public class SystemUI extends JFrame {
         List<com.fstgc.vms.model.Event> upcomingEvents = allEvents.stream()
             .filter(e -> !e.getEventDate().isBefore(today))
             .filter(e -> e.getStatus() != EventStatus.COMPLETED && e.getStatus() != EventStatus.CANCELLED)
+            .filter(e -> e.getCurrentRegistrations() < (e.getCapacity() + e.getCurrentRegistrations())) // Hide events at capacity
             .sorted((e1, e2) -> e1.getEventDate().compareTo(e2.getEventDate()))
             .toList();
             
@@ -1151,12 +1152,13 @@ public class SystemUI extends JFrame {
         
         card.add(contentPanel, BorderLayout.CENTER);
         
-        // Action buttons - only for admins
+        // Action buttons
         Role currentRole = authService.getCurrentUser().getRole();
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
+        buttonPanel.setBackground(CARD_BG);
+        
         if (currentRole == Role.ADMIN || currentRole == Role.SUPER_ADMIN) {
-            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
-            buttonPanel.setBackground(CARD_BG);
-            
+            // Admin buttons: Edit, Status, Delete
             JButton editBtn = new JButton("Edit");
             editBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
             editBtn.setForeground(PRIMARY_BLUE);
@@ -1196,7 +1198,29 @@ public class SystemUI extends JFrame {
             buttonPanel.add(editBtn);
             buttonPanel.add(statusBtn);
             buttonPanel.add(deleteBtn);
+        } else {
+            // Non-admin users: Register button (only if event is upcoming and not at capacity)
+            LocalDate today = LocalDate.now();
+            int totalCapacity = event.getCapacity() + event.getCurrentRegistrations();
+            boolean canRegister = !event.getEventDate().isBefore(today) && 
+                                 event.getCurrentRegistrations() < totalCapacity &&
+                                 event.getStatus() == EventStatus.PUBLISHED;
             
+            if (canRegister) {
+                JButton registerBtn = new JButton("Register");
+                registerBtn.setFont(new Font("Segoe UI", Font.BOLD, 11));
+                registerBtn.setForeground(Color.WHITE);
+                registerBtn.setBackground(GREEN);
+                registerBtn.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
+                registerBtn.setFocusPainted(false);
+                registerBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                registerBtn.addActionListener(e -> registerForEvent(event.getEventId()));
+                
+                buttonPanel.add(registerBtn);
+            }
+        }
+        
+        if (buttonPanel.getComponentCount() > 0) {
             card.add(buttonPanel, BorderLayout.SOUTH);
         }
         
@@ -1435,6 +1459,58 @@ public class SystemUI extends JFrame {
         
         dialog.add(mainPanel);
         dialog.setVisible(true);
+    }
+    
+    private void registerForEvent(int eventId) {
+        Event event = eventController.get(eventId);
+        if (event == null) {
+            JOptionPane.showMessageDialog(this, "Event not found!", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
+        // Check if event is at capacity
+        int totalCapacity = event.getCapacity() + event.getCurrentRegistrations();
+        if (event.getCurrentRegistrations() >= totalCapacity) {
+            JOptionPane.showMessageDialog(this, 
+                "Sorry, this event is at full capacity.", 
+                "Event Full", 
+                JOptionPane.WARNING_MESSAGE);
+            refreshAllPanels();
+            return;
+        }
+        
+        // Confirm registration
+        int confirm = JOptionPane.showConfirmDialog(this,
+            "Register for event: " + event.getTitle() + "?\n" +
+            "Date: " + event.getEventDate() + "\n" +
+            "Location: " + event.getLocation(),
+            "Confirm Registration",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.QUESTION_MESSAGE);
+            
+        if (confirm == JOptionPane.YES_OPTION) {
+            // Increment registration count
+            event.setCurrentRegistrations(event.getCurrentRegistrations() + 1);
+            event.setLastModifiedBy(authService.getCurrentUser().getUsername());
+            event.setLastModifiedDate(LocalDateTime.now());
+            
+            eventController.update(event);
+            
+            // Check if event is now at capacity
+            int newTotal = event.getCapacity() + event.getCurrentRegistrations();
+            String message = "Successfully registered for " + event.getTitle() + "!";
+            if (event.getCurrentRegistrations() >= newTotal) {
+                message += "\n\nThis event is now at full capacity.";
+            }
+            
+            JOptionPane.showMessageDialog(this, 
+                message,
+                "Registration Successful", 
+                JOptionPane.INFORMATION_MESSAGE);
+            
+            // Refresh to update display and potentially hide the event if at capacity
+            refreshAllPanels();
+        }
     }
     
     private void deleteEvent(int eventId) {
