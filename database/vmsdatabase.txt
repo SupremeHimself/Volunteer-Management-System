@@ -62,9 +62,9 @@
       "eventId": 2,
       "checkInTime": "2025-12-03T15:39:55.1188831",
       "status": "PRESENT",
-      "hoursWorked": 11.0,
-      "lastModifiedBy": "admin",
-      "lastModifiedDate": "2025-12-03T17:34:07.0845801"
+      "hoursWorked": 50.0,
+      "lastModifiedBy": "csharpe",
+      "lastModifiedDate": "2025-12-03T17:51:35.6606877"
     }
   },
   "announcements": {},
@@ -104,7 +104,7 @@
       "username": "admin",
       "passwordHash": "JAvlGPq9JyTdtvBO6x2llnRI1+gxwIyPqCKAn3THIKk\u003d",
       "role": "SUPER_ADMIN",
-      "lastLogin": "2025-12-03T17:36:04.7458389",
+      "lastLogin": "2025-12-03T17:47:08.7818376",
       "failedLoginAttempts": 0,
       "accountStatus": "ACTIVE",
       "createdDate": "2025-12-02T21:50:19.3207691",
@@ -118,7 +118,7 @@
       "username": "csharpe",
       "passwordHash": "75K3eLr+dx6JJFuJ7LwIpEpOFmwGZZkRiB84PURz6U8\u003d",
       "role": "VOLUNTEER",
-      "lastLogin": "2025-12-03T17:43:23.9573739",
+      "lastLogin": "2025-12-03T18:02:03.8280935",
       "failedLoginAttempts": 0,
       "accountStatus": "ACTIVE",
       "createdDate": "2025-12-02T23:43:47.4293635",
@@ -129,5 +129,36 @@
       "phone": "18761234567"
     }
   },
-  "awards": {}
+  "awards": {
+    "1": {
+      "awardId": 1,
+      "volunteerId": 2,
+      "badgeName": "First Steps",
+      "badgeDescription": "Completed 10 hours of volunteer work",
+      "criteriaId": -855724681,
+      "dateEarned": "2025-12-03T17:51:06.6894333",
+      "badgeTier": "BRONZE",
+      "featured": false
+    },
+    "2": {
+      "awardId": 2,
+      "volunteerId": 2,
+      "badgeName": "Dedicated Helper",
+      "badgeDescription": "Completed 25 hours of volunteer work",
+      "criteriaId": -1297223873,
+      "dateEarned": "2025-12-03T17:51:36.7707686",
+      "badgeTier": "BRONZE",
+      "featured": false
+    },
+    "3": {
+      "awardId": 3,
+      "volunteerId": 2,
+      "badgeName": "Community Champion",
+      "badgeDescription": "Completed 50 hours of volunteer work",
+      "criteriaId": 1744481024,
+      "dateEarned": "2025-12-03T17:51:36.7772195",
+      "badgeTier": "SILVER",
+      "featured": false
+    }
+  }
 }

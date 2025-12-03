@@ -264,6 +264,13 @@ public class SystemUI extends JFrame {
             displayBadges = volunteers.stream().mapToInt(v -> getBadgesEarnedCount(v.getId())).sum();
             hoursLabel = "Total Hours (All Users)";
             badgesLabel = "Total Badges (All Users)";
+            
+            // Check badges for all volunteers when admin views dashboard
+            for (Volunteer vol : volunteers) {
+                if (vol.getStatus() == VolunteerStatus.ACTIVE) {
+                    checkAndAwardBadges(vol.getId());
+                }
+            }
         } else {
             // Volunteers and Coordinators see their personal stats
             Volunteer currentVol = volunteerController.listAll().stream()
@@ -272,6 +279,9 @@ public class SystemUI extends JFrame {
                 .orElse(null);
             
             if (currentVol != null) {
+                // Check and award badges when volunteer views their dashboard
+                checkAndAwardBadges(currentVol.getId());
+                
                 displayHours = (int) calculateTotalHours(currentVol.getId());
                 displayBadges = getBadgesEarnedCount(currentVol.getId());
             } else {
@@ -2651,7 +2661,11 @@ public class SystemUI extends JFrame {
         contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
         contentPanel.setBackground(GRAY_BG);
         
-        // Badge tiers
+        // Check current user role
+        Role currentRole = authService.getCurrentUser().getRole();
+        boolean isAdmin = (currentRole == Role.ADMIN || currentRole == Role.SUPER_ADMIN);
+        
+        // Badge tiers section
         JPanel badgesCard = createModernCard();
         badgesCard.setLayout(new BorderLayout(10, 10));
         badgesCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 200));
@@ -2682,13 +2696,82 @@ public class SystemUI extends JFrame {
             }
         }
         
-        badgesGrid.add(createBadgeCard("🥉 Bronze", "10+ hours", new Color(205, 127, 50), bronzeCount));
-        badgesGrid.add(createBadgeCard("🥈 Silver", "50+ hours", new Color(192, 192, 192), silverCount));
-        badgesGrid.add(createBadgeCard("🥇 Gold", "100+ hours", new Color(255, 215, 0), goldCount));
-        badgesGrid.add(createBadgeCard("💎 Platinum", "200+ hours", PRIMARY_BLUE, platinumCount));
+        badgesGrid.add(createBadgeTierCard("🥉 Bronze", "10+ hours", new Color(205, 127, 50), bronzeCount));
+        badgesGrid.add(createBadgeTierCard("🥈 Silver", "50+ hours", new Color(192, 192, 192), silverCount));
+        badgesGrid.add(createBadgeTierCard("🥇 Gold", "100+ hours", new Color(255, 215, 0), goldCount));
+        badgesGrid.add(createBadgeTierCard("💎 Platinum", "200+ hours", PRIMARY_BLUE, platinumCount));
         
         badgesCard.add(badgesGrid, BorderLayout.CENTER);
         contentPanel.add(badgesCard);
+        contentPanel.add(Box.createVerticalStrut(15));
+        
+        // My Achievements section
+        JPanel achievementsCard = createModernCard();
+        achievementsCard.setLayout(new BorderLayout(10, 10));
+        
+        JLabel achievementsTitle = new JLabel(isAdmin ? "All Achievements Earned" : "My Achievements");
+        achievementsTitle.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        achievementsTitle.setForeground(TEXT_PRIMARY);
+        achievementsCard.add(achievementsTitle, BorderLayout.NORTH);
+        
+        // Get awards to display
+        List<com.fstgc.vms.model.Award> awardsToDisplay = new ArrayList<>();
+        if (isAdmin) {
+            // Show all awards from all active volunteers
+            for (Volunteer vol : volunteerController.listAll()) {
+                if (vol.getStatus() == VolunteerStatus.ACTIVE) {
+                    awardsToDisplay.addAll(awardController.getAwardsByVolunteer(vol.getId()));
+                }
+            }
+        } else {
+            // Show only current user's awards
+            Volunteer currentVol = volunteerController.listAll().stream()
+                .filter(v -> v.getEmail().equals(authService.getCurrentUser().getEmail()))
+                .findFirst()
+                .orElse(null);
+            if (currentVol != null) {
+                awardsToDisplay = awardController.getAwardsByVolunteer(currentVol.getId());
+            }
+        }
+        
+        // Create grid for achievements
+        JPanel achievementsGrid = new JPanel(new GridLayout(0, 3, 15, 15)); // 3 columns, dynamic rows
+        achievementsGrid.setBackground(CARD_BG);
+        achievementsGrid.setBorder(new EmptyBorder(10, 10, 10, 10));
+        
+        if (awardsToDisplay.isEmpty()) {
+            JLabel noAchievementsLabel = new JLabel(isAdmin ? "No achievements earned yet" : "You haven't earned any achievements yet. Keep volunteering!");
+            noAchievementsLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            noAchievementsLabel.setForeground(TEXT_SECONDARY);
+            noAchievementsLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            achievementsCard.add(noAchievementsLabel, BorderLayout.CENTER);
+        } else {
+            // Group achievements by name and show each with count if admin
+            java.util.Map<String, Integer> achievementCounts = new java.util.LinkedHashMap<>();
+            java.util.Map<String, com.fstgc.vms.model.Award> achievementExamples = new java.util.LinkedHashMap<>();
+            
+            for (com.fstgc.vms.model.Award award : awardsToDisplay) {
+                String achievementName = award.getBadgeName();
+                achievementCounts.put(achievementName, achievementCounts.getOrDefault(achievementName, 0) + 1);
+                if (!achievementExamples.containsKey(achievementName)) {
+                    achievementExamples.put(achievementName, award);
+                }
+            }
+            
+            for (String achievementName : achievementCounts.keySet()) {
+                com.fstgc.vms.model.Award award = achievementExamples.get(achievementName);
+                int count = achievementCounts.get(achievementName);
+                achievementsGrid.add(createAchievementCard(award, isAdmin ? count : 0));
+            }
+            
+            JScrollPane achievementsScroll = new JScrollPane(achievementsGrid);
+            achievementsScroll.setBorder(null);
+            achievementsScroll.setBackground(CARD_BG);
+            achievementsScroll.setPreferredSize(new Dimension(0, 200));
+            achievementsCard.add(achievementsScroll, BorderLayout.CENTER);
+        }
+        
+        contentPanel.add(achievementsCard);
         contentPanel.add(Box.createVerticalStrut(15));
         
         // Leaderboard
@@ -2734,7 +2817,7 @@ public class SystemUI extends JFrame {
         return panel;
     }
     
-    private JPanel createBadgeCard(String name, String requirement, Color color, int count) {
+    private JPanel createBadgeTierCard(String name, String requirement, Color color, int count) {
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(color);
@@ -2760,6 +2843,69 @@ public class SystemUI extends JFrame {
         card.add(reqLabel);
         card.add(Box.createVerticalStrut(10));
         card.add(countLabel);
+        
+        return card;
+    }
+    
+    private JPanel createAchievementCard(com.fstgc.vms.model.Award award, int count) {
+        JPanel card = new JPanel();
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        
+        // Color based on badge tier
+        Color bgColor;
+        switch (award.getBadgeTier()) {
+            case BRONZE: bgColor = new Color(205, 127, 50); break;
+            case SILVER: bgColor = new Color(192, 192, 192); break;
+            case GOLD: bgColor = new Color(255, 215, 0); break;
+            case PLATINUM: bgColor = PRIMARY_BLUE; break;
+            default: bgColor = new Color(150, 150, 150);
+        }
+        
+        card.setBackground(bgColor);
+        card.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(bgColor.darker(), 2),
+            new EmptyBorder(15, 10, 15, 10)
+        ));
+        
+        // Badge icon based on tier
+        String icon;
+        switch (award.getBadgeTier()) {
+            case BRONZE: icon = "🥉"; break;
+            case SILVER: icon = "🥈"; break;
+            case GOLD: icon = "🥇"; break;
+            case PLATINUM: icon = "💎"; break;
+            default: icon = "🏅";
+        }
+        
+        JLabel iconLabel = new JLabel(icon);
+        iconLabel.setFont(getEmojiFont(32));
+        iconLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        JLabel nameLabel = new JLabel("<html><center>" + award.getBadgeName() + "</center></html>");
+        nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        nameLabel.setForeground(Color.WHITE);
+        nameLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        JLabel descLabel = new JLabel("<html><center>" + award.getBadgeDescription() + "</center></html>");
+        descLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        descLabel.setForeground(new Color(255, 255, 255, 230));
+        descLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        card.add(iconLabel);
+        card.add(Box.createVerticalStrut(8));
+        card.add(nameLabel);
+        card.add(Box.createVerticalStrut(5));
+        card.add(descLabel);
+        
+        // If count is provided (admin view), show how many times this badge was earned
+        if (count > 0) {
+            card.add(Box.createVerticalStrut(5));
+            JLabel countLabel = new JLabel("×" + count);
+            countLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            countLabel.setForeground(Color.WHITE);
+            countLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+            card.add(countLabel);
+        }
         
         return card;
     }
@@ -2790,7 +2936,8 @@ public class SystemUI extends JFrame {
         nameLabel.setForeground(TEXT_PRIMARY);
         
         int badgeCount = getBadgesEarnedCount(vol.getId());
-        JLabel badgesLabel = new JLabel(badgeCount + " badge" + (badgeCount != 1 ? "s" : "") + " earned");
+        double totalHours = calculateTotalHours(vol.getId());
+        JLabel badgesLabel = new JLabel(badgeCount + " badge" + (badgeCount != 1 ? "s" : "") + " • " + String.format("%.1f hrs", totalHours));
         badgesLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         badgesLabel.setForeground(TEXT_SECONDARY);
         

@@ -1,0 +1,24 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Launch Volunteer Management System",
+            "request": "launch",
+            "mainClass": "com.fstgc.vms.Main",
+            "projectName": "volunteer-management-system",
+            "console": "integratedTerminal"
+        },
+        {
+            "type": "java",
+            "name": "Launch Volunteer Management System (JAR)",
+            "request": "launch",
+            "mainClass": "com.fstgc.vms.Main",
+            "projectName": "volunteer-management-system",
+            "classPaths": [
+                "${workspaceFolder}/target/volunteer-management-system-1.0.0.jar"
+            ],
+            "console": "integratedTerminal"
+        }
+    ]
+}
