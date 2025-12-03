@@ -10,6 +10,8 @@ public class Volunteer extends Person {
     private String profilePhotoUrl;
     private LocalDate dateOfBirth;
     private String address;
+    // Number of events this volunteer has attended; new volunteers start at 0
+    private int eventsAttended = 0;
 
     public LocalDateTime getRegistrationDate() { return registrationDate; }
     public void setRegistrationDate(LocalDateTime registrationDate) { this.registrationDate = registrationDate; }
@@ -21,6 +23,9 @@ public class Volunteer extends Person {
     public void setDateOfBirth(LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }
     public String getAddress() { return address; }
     public void setAddress(String address) { this.address = address; }
+
+    public int getEventsAttended() { return eventsAttended; }
+    public void setEventsAttended(int eventsAttended) { this.eventsAttended = eventsAttended; }
     
     // Placeholder for total hours calculation - in production this would aggregate from attendance records
     public double getTotalHoursWorked() {

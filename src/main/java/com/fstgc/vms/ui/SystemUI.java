@@ -240,7 +240,8 @@ public class SystemUI extends JFrame {
         statsPanel.add(createStatCard("Active Volunteers", String.valueOf(volunteers.size()), PRIMARY_BLUE, "👥"));
         statsPanel.add(createStatCard("Upcoming Events", String.valueOf(events.size()), GREEN, "📅"));
         statsPanel.add(createStatCard("Total Hours", String.valueOf(totalHours), PURPLE, "⏰"));
-        statsPanel.add(createStatCard("Badges Earned", "12", ORANGE, "🏆"));
+        // On launch, show 0 badges earned
+        statsPanel.add(createStatCard("Badges Earned", "0", ORANGE, "🏆"));
         
         contentPanel.add(statsPanel);
         contentPanel.add(Box.createVerticalStrut(20));
@@ -516,18 +517,34 @@ public class SystemUI extends JFrame {
         panel.setBackground(GRAY_BG);
         panel.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        // Header with title and add button
+        // Header with title and (for admins) add button
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setBackground(GRAY_BG);
         
         JLabel titleLabel = new JLabel("Volunteers");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 28));
         titleLabel.setForeground(TEXT_PRIMARY);
-        
+        headerPanel.add(titleLabel, BorderLayout.WEST);
+
+        // If current user is a volunteer, they should not see the directory at all
+        Role role = authService.getCurrentUserRole();
+        if (role == Role.VOLUNTEER) {
+            panel.add(headerPanel, BorderLayout.NORTH);
+
+            JPanel restrictedCard = createModernCard();
+            restrictedCard.setLayout(new BorderLayout());
+            JLabel msg = new JLabel("Volunteer directory is only visible to admins and coordinators.");
+            msg.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            msg.setForeground(TEXT_SECONDARY);
+            msg.setHorizontalAlignment(SwingConstants.CENTER);
+            restrictedCard.add(msg, BorderLayout.CENTER);
+
+            panel.add(restrictedCard, BorderLayout.CENTER);
+            return panel;
+        }
+
         JButton addBtn = createModernButton("+ Add Volunteer", PRIMARY_BLUE);
         addBtn.addActionListener(e -> showAddVolunteerDialog());
-        
-        headerPanel.add(titleLabel, BorderLayout.WEST);
         headerPanel.add(addBtn, BorderLayout.EAST);
         
         panel.add(headerPanel, BorderLayout.NORTH);
@@ -560,7 +577,66 @@ public class SystemUI extends JFrame {
             });
         }
 
+        // Action buttons for admins
+        JPanel actionsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
+        actionsPanel.setBackground(CARD_BG);
+
+        JButton editBtn = createModernButton("Edit", PRIMARY_BLUE);
+        JButton deleteBtn = createModernButton("Delete", new Color(220, 38, 38));
+        JButton statusBtn = createModernButton("Change Status", PURPLE);
+
+        editBtn.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row == -1) {
+                JOptionPane.showMessageDialog(this, "Please select a volunteer to edit.", "No Selection", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            int id = (int) table.getValueAt(row, 0);
+            showEditVolunteerDialog(id);
+        });
+
+        deleteBtn.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row == -1) {
+                JOptionPane.showMessageDialog(this, "Please select a volunteer to delete.", "No Selection", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            int id = (int) table.getValueAt(row, 0);
+            int confirm = JOptionPane.showConfirmDialog(this,
+                "Are you sure you want to delete volunteer #" + id + "?",
+                "Confirm Delete",
+                JOptionPane.YES_NO_OPTION);
+            if (confirm == JOptionPane.YES_OPTION) {
+                try {
+                    boolean deleted = volunteerController.delete(id);
+                    if (deleted) {
+                        JOptionPane.showMessageDialog(this, "Volunteer deleted successfully.", "Deleted", JOptionPane.INFORMATION_MESSAGE);
+                        refreshVolunteerPanel();
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Unable to delete volunteer.", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+
+        statusBtn.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row == -1) {
+                JOptionPane.showMessageDialog(this, "Please select a volunteer to update.", "No Selection", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            int id = (int) table.getValueAt(row, 0);
+            showChangeVolunteerStatusDialog(id);
+        });
+
+        actionsPanel.add(statusBtn);
+        actionsPanel.add(editBtn);
+        actionsPanel.add(deleteBtn);
+
         tableCard.add(scrollPane, BorderLayout.CENTER);
+        tableCard.add(actionsPanel, BorderLayout.SOUTH);
         panel.add(tableCard, BorderLayout.CENTER);
 
         return panel;
@@ -640,6 +716,141 @@ public class SystemUI extends JFrame {
         refreshDashboard();
         tabbedPane.setSelectedIndex(selectedIndex);
     }
+
+    private void showEditVolunteerDialog(int volunteerId) {
+        volunteerController.get(volunteerId).ifPresentOrElse(existing -> {
+            JDialog dialog = new JDialog(this, "Edit Volunteer", true);
+            dialog.setSize(450, 350);
+            dialog.setLocationRelativeTo(this);
+
+            JPanel mainPanel = new JPanel(new BorderLayout(15, 15));
+            mainPanel.setBackground(CARD_BG);
+            mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+            JPanel formPanel = new JPanel(new GridLayout(5, 2, 10, 15));
+            formPanel.setBackground(CARD_BG);
+
+            JTextField firstNameField = createModernTextField();
+            firstNameField.setText(existing.getFirstName());
+            JTextField lastNameField = createModernTextField();
+            lastNameField.setText(existing.getLastName());
+            JTextField emailField = createModernTextField();
+            emailField.setText(existing.getEmail());
+            JTextField phoneField = createModernTextField();
+            phoneField.setText(existing.getPhone());
+            JComboBox<VolunteerStatus> statusCombo = new JComboBox<>(VolunteerStatus.values());
+            statusCombo.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+            statusCombo.setSelectedItem(existing.getStatus());
+
+            formPanel.add(createLabel("First Name:"));
+            formPanel.add(firstNameField);
+            formPanel.add(createLabel("Last Name:"));
+            formPanel.add(lastNameField);
+            formPanel.add(createLabel("Email:"));
+            formPanel.add(emailField);
+            formPanel.add(createLabel("Phone:"));
+            formPanel.add(phoneField);
+            formPanel.add(createLabel("Status:"));
+            formPanel.add(statusCombo);
+
+            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+            buttonPanel.setBackground(CARD_BG);
+
+            JButton cancelBtn = createModernButton("Cancel", TEXT_SECONDARY);
+            cancelBtn.addActionListener(e -> dialog.dispose());
+
+            JButton saveBtn = createModernButton("Save", PRIMARY_BLUE);
+            saveBtn.addActionListener(e -> {
+                try {
+                    VolunteerStatus status = (VolunteerStatus) statusCombo.getSelectedItem();
+                    volunteerController.updateVolunteer(
+                        volunteerId,
+                        firstNameField.getText(),
+                        lastNameField.getText(),
+                        emailField.getText(),
+                        phoneField.getText(),
+                        status
+                    );
+                    JOptionPane.showMessageDialog(dialog,
+                        "Volunteer updated successfully!",
+                        "Success", JOptionPane.INFORMATION_MESSAGE);
+                    dialog.dispose();
+                    refreshVolunteerPanel();
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(dialog,
+                        "Error: " + ex.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            });
+
+            buttonPanel.add(cancelBtn);
+            buttonPanel.add(saveBtn);
+
+            mainPanel.add(formPanel, BorderLayout.CENTER);
+            mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+            dialog.add(mainPanel);
+            dialog.setVisible(true);
+        }, () -> JOptionPane.showMessageDialog(this,
+                "Volunteer not found.",
+                "Error", JOptionPane.ERROR_MESSAGE));
+    }
+
+    private void showChangeVolunteerStatusDialog(int volunteerId) {
+        volunteerController.get(volunteerId).ifPresentOrElse(existing -> {
+            JDialog dialog = new JDialog(this, "Change Volunteer Status", true);
+            dialog.setSize(350, 200);
+            dialog.setLocationRelativeTo(this);
+
+            JPanel mainPanel = new JPanel(new BorderLayout(15, 15));
+            mainPanel.setBackground(CARD_BG);
+            mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+            JPanel formPanel = new JPanel(new GridLayout(2, 1, 10, 15));
+            formPanel.setBackground(CARD_BG);
+
+            JComboBox<VolunteerStatus> statusCombo = new JComboBox<>(VolunteerStatus.values());
+            statusCombo.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+            statusCombo.setSelectedItem(existing.getStatus());
+
+            formPanel.add(createLabel("New Status:"));
+            formPanel.add(statusCombo);
+
+            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+            buttonPanel.setBackground(CARD_BG);
+
+            JButton cancelBtn = createModernButton("Cancel", TEXT_SECONDARY);
+            cancelBtn.addActionListener(e -> dialog.dispose());
+
+            JButton saveBtn = createModernButton("Update", PURPLE);
+            saveBtn.addActionListener(e -> {
+                try {
+                    VolunteerStatus status = (VolunteerStatus) statusCombo.getSelectedItem();
+                    volunteerController.changeStatus(volunteerId, status);
+                    JOptionPane.showMessageDialog(dialog,
+                        "Volunteer status updated successfully!",
+                        "Success", JOptionPane.INFORMATION_MESSAGE);
+                    dialog.dispose();
+                    refreshVolunteerPanel();
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(dialog,
+                        "Error: " + ex.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            });
+
+            buttonPanel.add(cancelBtn);
+            buttonPanel.add(saveBtn);
+
+            mainPanel.add(formPanel, BorderLayout.CENTER);
+            mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+            dialog.add(mainPanel);
+            dialog.setVisible(true);
+        }, () -> JOptionPane.showMessageDialog(this,
+                "Volunteer not found.",
+                "Error", JOptionPane.ERROR_MESSAGE));
+    }
     
     private JTextField createModernTextField() {
         JTextField field = new JTextField();
@@ -687,7 +898,12 @@ public class SystemUI extends JFrame {
         addBtn.addActionListener(e -> showAddEventDialog());
         
         headerPanel.add(titleLabel, BorderLayout.WEST);
-        headerPanel.add(addBtn, BorderLayout.EAST);
+        
+        // Only admins/coordinators can create events; hide the button for volunteers
+        Role role = authService.getCurrentUserRole();
+        if (role != Role.VOLUNTEER) {
+            headerPanel.add(addBtn, BorderLayout.EAST);
+        }
         
         panel.add(headerPanel, BorderLayout.NORTH);
 
@@ -1082,7 +1298,7 @@ public class SystemUI extends JFrame {
         statsPanel.add(hoursLabel);
         
         statsPanel.add(createLabel("Events Attended:"));
-        JLabel eventsLabel = new JLabel("3");
+        JLabel eventsLabel = new JLabel(String.valueOf(vol.getEventsAttended()));
         eventsLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
         statsPanel.add(eventsLabel);
         
@@ -1342,10 +1558,11 @@ public class SystemUI extends JFrame {
         JPanel badgesGrid = new JPanel(new GridLayout(1, 4, 15, 0));
         badgesGrid.setBackground(CARD_BG);
         
-        badgesGrid.add(createBadgeCard("🥉 Bronze", "10+ hours", new Color(205, 127, 50), 15));
-        badgesGrid.add(createBadgeCard("🥈 Silver", "50+ hours", new Color(192, 192, 192), 8));
-        badgesGrid.add(createBadgeCard("🥇 Gold", "100+ hours", new Color(255, 215, 0), 3));
-        badgesGrid.add(createBadgeCard("💎 Platinum", "200+ hours", PRIMARY_BLUE, 1));
+        // At startup, all badge tiers show 0 earned
+        badgesGrid.add(createBadgeCard("🥉 Bronze", "10+ hours", new Color(205, 127, 50), 0));
+        badgesGrid.add(createBadgeCard("🥈 Silver", "50+ hours", new Color(192, 192, 192), 0));
+        badgesGrid.add(createBadgeCard("🥇 Gold", "100+ hours", new Color(255, 215, 0), 0));
+        badgesGrid.add(createBadgeCard("💎 Platinum", "200+ hours", PRIMARY_BLUE, 0));
         
         badgesCard.add(badgesGrid, BorderLayout.CENTER);
         contentPanel.add(badgesCard);

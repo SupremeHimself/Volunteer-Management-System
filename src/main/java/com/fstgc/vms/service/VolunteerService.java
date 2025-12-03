@@ -24,7 +24,29 @@ public class VolunteerService {
     }
 
     public Volunteer update(Volunteer v) { return repository.update(v); }
-    public boolean deactivate(int id) { return repository.findById(id).map(v -> { v.setStatus(VolunteerStatus.INACTIVE); repository.update(v); return true; }).orElse(false); }
+
+    public boolean deactivate(int id) {
+        return repository.findById(id)
+            .map(v -> {
+                v.setStatus(VolunteerStatus.INACTIVE);
+                repository.update(v);
+                return true;
+            })
+            .orElse(false);
+    }
+
     public Optional<Volunteer> get(int id) { return repository.findById(id); }
+
     public List<Volunteer> list() { return repository.findAll(); }
+
+    public boolean delete(int id) {
+        return repository.delete(id);
+    }
+
+    public Optional<Volunteer> changeStatus(int id, VolunteerStatus newStatus) {
+        return repository.findById(id).map(v -> {
+            v.setStatus(newStatus);
+            return repository.update(v);
+        });
+    }
 }

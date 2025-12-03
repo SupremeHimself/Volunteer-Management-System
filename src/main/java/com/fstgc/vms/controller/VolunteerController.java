@@ -1,9 +1,11 @@
 package com.fstgc.vms.controller;
 
 import com.fstgc.vms.model.Volunteer;
-import com.fstgc.vms.service.ValidationService;
+import com.fstgc.vms.model.enums.VolunteerStatus;
 import com.fstgc.vms.service.VolunteerService;
+
 import java.util.List;
+import java.util.Optional;
 
 public class VolunteerController {
     private final VolunteerService service;
@@ -20,6 +22,27 @@ public class VolunteerController {
     }
 
     public List<Volunteer> list() { return service.list(); }
-    
+
     public List<Volunteer> listAll() { return service.list(); }
+
+    public Optional<Volunteer> get(int id) { return service.get(id); }
+
+    public Volunteer updateVolunteer(int id, String firstName, String lastName, String email, String phone, VolunteerStatus status) {
+        Volunteer existing = service.get(id)
+            .orElseThrow(() -> new IllegalArgumentException("Volunteer not found: " + id));
+        existing.setFirstName(firstName);
+        existing.setLastName(lastName);
+        existing.setEmail(email);
+        existing.setPhone(phone);
+        if (status != null) {
+            existing.setStatus(status);
+        }
+        return service.update(existing);
+    }
+
+    public boolean delete(int id) { return service.delete(id); }
+
+    public Optional<Volunteer> changeStatus(int id, VolunteerStatus status) {
+        return service.changeStatus(id, status);
+    }
 }

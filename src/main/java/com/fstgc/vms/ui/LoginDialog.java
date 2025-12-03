@@ -182,6 +182,10 @@ public class LoginDialog extends JDialog {
     }
     
     private JPanel createSignupPanel() {
+        // Outer container so we can embed the form in a scroll pane
+        JPanel container = new JPanel(new BorderLayout());
+        container.setBackground(Color.WHITE);
+
         JPanel formPanel = new JPanel();
         formPanel.setBackground(Color.WHITE);
         formPanel.setLayout(new BoxLayout(formPanel, BoxLayout.Y_AXIS));
@@ -224,7 +228,7 @@ public class LoginDialog extends JDialog {
         signupButton.setPreferredSize(new Dimension(150, 40));
         signupButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        JButton cancelButton = new JButton("Cancel");
+        JButton cancelButton = new JButton("Back to Login");
         cancelButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         cancelButton.setForeground(TEXT_SECONDARY);
         cancelButton.setBackground(GRAY_BG);
@@ -234,10 +238,8 @@ public class LoginDialog extends JDialog {
         cancelButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         signupButton.addActionListener(e -> attemptSignup());
-        cancelButton.addActionListener(e -> {
-            authenticated = false;
-            dispose();
-        });
+        // Instead of closing the dialog, go back to the main login view
+        cancelButton.addActionListener(e -> cardLayout.show(cardPanel, "LOGIN"));
 
         buttonPanel.add(signupButton);
         buttonPanel.add(cancelButton);
@@ -263,7 +265,15 @@ public class LoginDialog extends JDialog {
         switchPanel.add(switchButton);
         formPanel.add(switchPanel);
 
-        return formPanel;
+        // Make the whole signup form scrollable so all fields are accessible on smaller screens
+        JScrollPane scrollPane = new JScrollPane(formPanel);
+        scrollPane.setBorder(null);
+        scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+
+        container.add(scrollPane, BorderLayout.CENTER);
+        return container;
     }
     
     private void addFormField(JPanel panel, String label, JComponent field) {

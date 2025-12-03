@@ -1,9 +1,11 @@
 package com.fstgc.vms.service;
 
 import com.fstgc.vms.model.SystemAdmin;
+import com.fstgc.vms.model.Volunteer;
 import com.fstgc.vms.model.enums.AccountStatus;
 import com.fstgc.vms.model.enums.Role;
 import com.fstgc.vms.repository.AdminRepository;
+import com.fstgc.vms.repository.memory.InMemoryVolunteerRepository;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.Base64;
@@ -11,10 +13,14 @@ import java.util.Optional;
 
 public class AuthenticationService {
     private final AdminRepository adminRepository;
+    // Service used to create Volunteer records for new signups so admins can manage them
+    private final VolunteerService volunteerService;
     private SystemAdmin currentUser;
 
     public AuthenticationService(AdminRepository adminRepository) {
         this.adminRepository = adminRepository;
+        // Separate volunteer service used only for signups; persists via DataPersistence
+        this.volunteerService = new VolunteerService(new InMemoryVolunteerRepository(), new ValidationService());
         // Create default admin if none exists
         initializeDefaultAdmin();
     }
@@ -99,7 +105,7 @@ public class AuthenticationService {
             return false;
         }
 
-        // Create new admin account
+        // Create new admin account used for authentication
         SystemAdmin admin = new SystemAdmin();
         admin.setFirstName(firstName);
         admin.setLastName(lastName);
@@ -109,6 +115,20 @@ public class AuthenticationService {
         admin.setRole(Role.VOLUNTEER); // New signups get VOLUNTEER role
         admin.setAccountStatus(AccountStatus.ACTIVE);
         adminRepository.save(admin);
+
+        // Also create a Volunteer domain record so admins can manage this person
+        try {
+            Volunteer volunteer = new Volunteer();
+            volunteer.setFirstName(firstName);
+            volunteer.setLastName(lastName);
+            volunteer.setEmail(email);
+            volunteer.setPhone(phone);
+            volunteerService.register(volunteer);
+        } catch (Exception e) {
+            // Do not block account creation if the volunteer record fails; log to stderr instead
+            System.err.println("Warning: failed to create Volunteer record for signup: " + e.getMessage());
+        }
+
         return true;
     }
 
