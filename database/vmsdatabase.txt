@@ -10,6 +10,17 @@
       "lastName": "Jackson",
       "email": "john.jackson@gmail.com",
       "phone": "8765637363"
+    },
+    "2": {
+      "registrationDate": "2025-12-03T00:36:05.855423",
+      "status": "ACTIVE",
+      "eventsAttended": 0,
+      "badgesEarned": 0,
+      "id": 2,
+      "firstName": "Jeremy",
+      "lastName": "Hinds",
+      "email": "jhinds@gmail.com",
+      "phone": "87612345678"
     }
   },
   "events": {
@@ -44,7 +55,7 @@
       "username": "admin",
       "passwordHash": "JAvlGPq9JyTdtvBO6x2llnRI1+gxwIyPqCKAn3THIKk\u003d",
       "role": "SUPER_ADMIN",
-      "lastLogin": "2025-12-02T23:46:29.6568804",
+      "lastLogin": "2025-12-03T00:31:36.8390357",
       "failedLoginAttempts": 0,
       "accountStatus": "ACTIVE",
       "createdDate": "2025-12-02T21:50:19.3207691",
@@ -67,6 +78,34 @@
       "lastName": "Jackson",
       "email": "john.jackson@gmail.com",
       "phone": "8765637363"
+    },
+    "3": {
+      "username": "ruthJAM",
+      "passwordHash": "XohImNooBHFR0OVvjcYpJ3NgPQ1qq73WKhHvch0VQtg\u003d",
+      "role": "VOLUNTEER",
+      "lastLogin": "2025-12-03T00:44:40.1492701",
+      "failedLoginAttempts": 0,
+      "accountStatus": "ACTIVE",
+      "createdDate": "2025-12-03T00:26:41.8773776",
+      "id": 3,
+      "firstName": "Ruth",
+      "lastName": "Hendricks",
+      "email": "r.hendricks@gmail.com",
+      "phone": "telephone"
+    },
+    "4": {
+      "username": "jermy123",
+      "passwordHash": "XohImNooBHFR0OVvjcYpJ3NgPQ1qq73WKhHvch0VQtg\u003d",
+      "role": "VOLUNTEER",
+      "lastLogin": "2025-12-03T00:36:12.2104919",
+      "failedLoginAttempts": 0,
+      "accountStatus": "ACTIVE",
+      "createdDate": "2025-12-03T00:36:05.8315055",
+      "id": 4,
+      "firstName": "Jeremy",
+      "lastName": "Hinds",
+      "email": "jhinds@gmail.com",
+      "phone": "87612345678"
     }
   }
 }

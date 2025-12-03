@@ -1053,35 +1053,61 @@ public class SystemUI extends JFrame {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
         buttonPanel.setBackground(CARD_BG);
         
-        JButton editBtn = new JButton("Edit");
-        editBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        editBtn.setForeground(PRIMARY_BLUE);
-        editBtn.setBackground(Color.WHITE);
-        editBtn.setBorder(BorderFactory.createLineBorder(PRIMARY_BLUE, 1));
-        editBtn.setFocusPainted(false);
-        editBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        editBtn.addActionListener(e -> showEditEventDialog(event.getEventId()));
+        Role userRole = authService.getCurrentUserRole();
         
-        JButton deleteBtn = new JButton("Delete");
-        deleteBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        deleteBtn.setForeground(new Color(239, 68, 68));
-        deleteBtn.setBackground(Color.WHITE);
-        deleteBtn.setBorder(BorderFactory.createLineBorder(new Color(239, 68, 68), 1));
-        deleteBtn.setFocusPainted(false);
-        deleteBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        deleteBtn.addActionListener(e -> {
-            int confirm = JOptionPane.showConfirmDialog(this,
-                "Are you sure you want to delete event: " + event.getTitle() + "?",
-                "Confirm Delete",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE);
-            if (confirm == JOptionPane.YES_OPTION) {
-                deleteEvent(event.getEventId());
+        // For admins: show Edit and Delete buttons
+        if (userRole != Role.VOLUNTEER) {
+            JButton editBtn = new JButton("Edit");
+            editBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            editBtn.setForeground(PRIMARY_BLUE);
+            editBtn.setBackground(Color.WHITE);
+            editBtn.setBorder(BorderFactory.createLineBorder(PRIMARY_BLUE, 1));
+            editBtn.setFocusPainted(false);
+            editBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            editBtn.addActionListener(e -> showEditEventDialog(event.getEventId()));
+            
+            JButton deleteBtn = new JButton("Delete");
+            deleteBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            deleteBtn.setForeground(new Color(239, 68, 68));
+            deleteBtn.setBackground(Color.WHITE);
+            deleteBtn.setBorder(BorderFactory.createLineBorder(new Color(239, 68, 68), 1));
+            deleteBtn.setFocusPainted(false);
+            deleteBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            deleteBtn.addActionListener(e -> {
+                int confirm = JOptionPane.showConfirmDialog(this,
+                    "Are you sure you want to delete event: " + event.getTitle() + "?",
+                    "Confirm Delete",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
+                if (confirm == JOptionPane.YES_OPTION) {
+                    deleteEvent(event.getEventId());
+                }
+            });
+            
+            buttonPanel.add(editBtn);
+            buttonPanel.add(deleteBtn);
+        } else {
+            // For volunteers: show Register button
+            // Check if volunteer is already registered
+            SystemAdmin currentUser = authService.getCurrentUser();
+            boolean isRegistered = isVolunteerRegisteredForEvent(currentUser.getId(), event.getEventId());
+            
+            JButton registerBtn = new JButton(isRegistered ? "✓ Registered" : "Register");
+            registerBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            registerBtn.setForeground(isRegistered ? new Color(34, 197, 94) : PRIMARY_BLUE);
+            registerBtn.setBackground(Color.WHITE);
+            registerBtn.setBorder(BorderFactory.createLineBorder(
+                isRegistered ? new Color(34, 197, 94) : PRIMARY_BLUE, 1));
+            registerBtn.setFocusPainted(false);
+            registerBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            registerBtn.setEnabled(!isRegistered);
+            
+            if (!isRegistered) {
+                registerBtn.addActionListener(e -> registerVolunteerForEvent(event));
             }
-        });
-        
-        buttonPanel.add(editBtn);
-        buttonPanel.add(deleteBtn);
+            
+            buttonPanel.add(registerBtn);
+        }
         
         card.add(buttonPanel, BorderLayout.SOUTH);
         
@@ -1252,6 +1278,47 @@ public class SystemUI extends JFrame {
             refreshAllPanels();
         } else {
             JOptionPane.showMessageDialog(this, "Failed to delete event!", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    private boolean isVolunteerRegisteredForEvent(int volunteerId, int eventId) {
+        // Check if volunteer has already registered for this event
+        // by checking if an attendance record exists
+        return attendanceController.isVolunteerRegisteredForEvent(volunteerId, eventId);
+    }
+    
+    private void registerVolunteerForEvent(com.fstgc.vms.model.Event event) {
+        SystemAdmin currentUser = authService.getCurrentUser();
+        
+        try {
+            // Check if volunteer is already registered
+            if (isVolunteerRegisteredForEvent(currentUser.getId(), event.getEventId())) {
+                JOptionPane.showMessageDialog(this, 
+                    "You are already registered for this event!", 
+                    "Already Registered", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
+            // Check if event is at capacity
+            if (event.getCurrentRegistrations() >= event.getCapacity()) {
+                JOptionPane.showMessageDialog(this, 
+                    "This event is at full capacity!", 
+                    "Event Full", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
+            // Register volunteer for event (check-in immediately)
+            Attendance attendance = attendanceController.checkIn(currentUser.getId(), event.getEventId());
+            
+            JOptionPane.showMessageDialog(this, 
+                "Successfully registered for event!\nAttendance ID: " + attendance.getAttendanceId(),
+                "Success", JOptionPane.INFORMATION_MESSAGE);
+            
+            refreshAllPanels();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, 
+                "Error registering for event: " + ex.getMessage(), 
+                "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
     
