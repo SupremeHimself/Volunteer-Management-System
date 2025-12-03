@@ -106,7 +106,7 @@ public class AuthenticationService {
     public boolean register(String username, String firstName, String lastName, String email, String phone, String password) {
         // Check if username or email already exists
         Optional<SystemAdmin> existingUsername = adminRepository.findByUsername(username);
-        Optional<SystemAdmin> existingEmail = adminRepository.findByUsername(email);
+        Optional<SystemAdmin> existingEmail = adminRepository.findByEmail(email);
         if (existingUsername.isPresent() || existingEmail.isPresent()) {
             return false;
         }

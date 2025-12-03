@@ -39,9 +39,35 @@ public class VolunteerService {
         return phone != null && phone.matches("^\\+?[0-9\\s-()]{10,}$");
     }
 
-    public Volunteer update(Volunteer v) { return repository.update(v); }
+    public Volunteer update(Volunteer v) {
+        // Check if email is being changed to an existing email (excluding current volunteer)
+        if (v.getEmail() != null && !isValidEmail(v.getEmail())) {
+            throw new IllegalArgumentException("Invalid email");
+        }
+        repository.findByEmail(v.getEmail()).ifPresent(existing -> {
+            if (existing.getId() != v.getId()) {
+                throw new IllegalArgumentException("Email already exists");
+            }
+        });
+        if (v.getPhone() != null && !isValidPhone(v.getPhone())) {
+            throw new IllegalArgumentException("Invalid phone");
+        }
+        return repository.update(v);
+    }
     
     public Volunteer update(Volunteer v, String modifiedBy) {
+        // Check if email is being changed to an existing email (excluding current volunteer)
+        if (v.getEmail() != null && !isValidEmail(v.getEmail())) {
+            throw new IllegalArgumentException("Invalid email");
+        }
+        repository.findByEmail(v.getEmail()).ifPresent(existing -> {
+            if (existing.getId() != v.getId()) {
+                throw new IllegalArgumentException("Email already exists");
+            }
+        });
+        if (v.getPhone() != null && !isValidPhone(v.getPhone())) {
+            throw new IllegalArgumentException("Invalid phone");
+        }
         v.setLastModifiedBy(modifiedBy);
         v.setLastModifiedDate(java.time.LocalDateTime.now());
         return repository.update(v);

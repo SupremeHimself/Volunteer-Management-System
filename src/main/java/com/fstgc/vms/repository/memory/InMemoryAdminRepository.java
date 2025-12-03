@@ -29,6 +29,13 @@ public class InMemoryAdminRepository implements AdminRepository {
     }
 
     @Override
+    public Optional<SystemAdmin> findByEmail(String email) {
+        return store.values().stream()
+                .filter(a -> email != null && email.equalsIgnoreCase(a.getEmail()))
+                .findFirst();
+    }
+
+    @Override
     public Optional<SystemAdmin> findById(int id) {
         return Optional.ofNullable(store.get(id));
     }
