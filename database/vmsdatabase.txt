@@ -1,16 +1,16 @@
 {
   "volunteers": {
-    "1": {
-      "registrationDate": "2025-12-02T23:44:37.9685926",
+    "2": {
+      "registrationDate": "2025-12-03T15:01:31.3885222",
       "status": "ACTIVE",
       "eventsAttended": 0,
-      "lastModifiedBy": "csharpe",
-      "lastModifiedDate": "2025-12-02T23:44:37.9685926",
+      "lastModifiedBy": "System",
+      "lastModifiedDate": "2025-12-03T15:01:31.3925064",
       "badgesEarned": 0,
-      "id": 1,
+      "id": 2,
       "firstName": "Carl",
       "lastName": "Sharpe",
-      "email": "carlsharpe@test.com",
+      "email": "carl.sharpe@test.com",
       "phone": "18761234567"
     }
   },
@@ -20,8 +20,8 @@
       "title": "Christmas Day Outreach Programme",
       "eventDate": "2025-12-25",
       "location": "UWI Mona",
-      "capacity": 100,
-      "currentRegistrations": 0,
+      "capacity": 99,
+      "currentRegistrations": 1,
       "eventType": "COMMUNITY_SERVICE",
       "status": "DRAFT",
       "createdByAdminId": 0
@@ -42,11 +42,13 @@
       "title": "Labor Day Campus Clean-Up",
       "eventDate": "2025-10-20",
       "location": "Faculty Of Science \u0026 Technology, UWI Mona",
-      "capacity": 50,
-      "currentRegistrations": 0,
+      "capacity": 49,
+      "currentRegistrations": 1,
       "eventType": "COMMUNITY_SERVICE",
-      "status": "DRAFT",
-      "createdByAdminId": 0
+      "status": "COMPLETED",
+      "createdByAdminId": 0,
+      "lastModifiedBy": "admin",
+      "lastModifiedDate": "2025-12-03T15:06:23.3738826"
     }
   },
   "attendance": {},
@@ -57,7 +59,7 @@
       "username": "admin",
       "passwordHash": "JAvlGPq9JyTdtvBO6x2llnRI1+gxwIyPqCKAn3THIKk\u003d",
       "role": "SUPER_ADMIN",
-      "lastLogin": "2025-12-03T01:19:49.749606",
+      "lastLogin": "2025-12-03T15:05:30.0020236",
       "failedLoginAttempts": 0,
       "accountStatus": "ACTIVE",
       "createdDate": "2025-12-02T21:50:19.3207691",
@@ -71,7 +73,7 @@
       "username": "csharpe",
       "passwordHash": "75K3eLr+dx6JJFuJ7LwIpEpOFmwGZZkRiB84PURz6U8\u003d",
       "role": "VOLUNTEER",
-      "lastLogin": "2025-12-03T01:05:20.126121",
+      "lastLogin": "2025-12-03T15:28:02.544939",
       "failedLoginAttempts": 0,
       "accountStatus": "ACTIVE",
       "createdDate": "2025-12-02T23:43:47.4293635",

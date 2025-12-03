@@ -25,5 +25,13 @@ public class AttendanceController {
         return service.byVolunteer(volunteerId);
     }
     
+    public Attendance byId(int attendanceId) {
+        return service.byId(attendanceId);
+    }
+    
+    public Attendance update(Attendance attendance) {
+        return service.update(attendance);
+    }
+    
     public java.util.List<Attendance> listAll() { return service.listAll(); }
 }

@@ -51,12 +51,23 @@ public class InMemoryAttendanceRepository implements AttendanceRepository {
         int id = seq.getAndIncrement();
         attendance.setAttendanceId(id);
         store.put(id, attendance);
+        DataPersistence.saveAttendance(store);
         return attendance;
     }
 
     @Override
-    public Attendance update(Attendance attendance) { store.put(attendance.getAttendanceId(), attendance); return attendance; }
+    public Attendance update(Attendance attendance) { 
+        store.put(attendance.getAttendanceId(), attendance); 
+        DataPersistence.saveAttendance(store);
+        return attendance; 
+    }
 
     @Override
-    public boolean delete(int id) { return store.remove(id) != null; }
+    public boolean delete(int id) { 
+        boolean result = store.remove(id) != null; 
+        if (result) {
+            DataPersistence.saveAttendance(store);
+        }
+        return result;
+    }
 }

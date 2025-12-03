@@ -61,12 +61,23 @@ public class InMemoryTimesheetRepository implements TimesheetRepository {
         int id = seq.getAndIncrement();
         timesheet.setTimesheetId(id);
         store.put(id, timesheet);
+        DataPersistence.saveTimesheets(store);
         return timesheet;
     }
 
     @Override
-    public Timesheet update(Timesheet timesheet) { store.put(timesheet.getTimesheetId(), timesheet); return timesheet; }
+    public Timesheet update(Timesheet timesheet) { 
+        store.put(timesheet.getTimesheetId(), timesheet); 
+        DataPersistence.saveTimesheets(store);
+        return timesheet; 
+    }
 
     @Override
-    public boolean delete(int id) { return store.remove(id) != null; }
+    public boolean delete(int id) { 
+        boolean result = store.remove(id) != null; 
+        if (result) {
+            DataPersistence.saveTimesheets(store);
+        }
+        return result;
+    }
 }

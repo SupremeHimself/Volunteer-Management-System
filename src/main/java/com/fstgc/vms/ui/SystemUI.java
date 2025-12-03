@@ -53,8 +53,9 @@ public class SystemUI extends JFrame {
         VolunteerService volunteerService = new VolunteerService(new InMemoryVolunteerRepository());
         InMemoryEventRepository eventRepository = new InMemoryEventRepository();
         EventService eventService = new EventService(eventRepository);
-        AttendanceService attendanceService = new AttendanceService(new InMemoryAttendanceRepository(), eventRepository);
-        TimesheetService timesheetService = new TimesheetService(new InMemoryTimesheetRepository(), new InMemoryAttendanceRepository());
+        InMemoryTimesheetRepository timesheetRepository = new InMemoryTimesheetRepository();
+        AttendanceService attendanceService = new AttendanceService(new InMemoryAttendanceRepository(), eventRepository, timesheetRepository);
+        TimesheetService timesheetService = new TimesheetService(timesheetRepository, new InMemoryAttendanceRepository());
         AnnouncementService announcementService = new AnnouncementService(new InMemoryAnnouncementRepository());
         AwardService awardService = new AwardService(new InMemoryAwardRepository());
 
@@ -248,7 +249,7 @@ public class SystemUI extends JFrame {
         
         if (isAdmin) {
             // Admins see system-wide totals for ALL users
-            displayHours = volunteers.stream().mapToInt(v -> (int)v.getTotalHoursWorked()).sum();
+            displayHours = volunteers.stream().mapToInt(v -> (int)calculateTotalHours(v.getId())).sum();
             displayBadges = volunteers.stream().mapToInt(v -> getBadgesEarnedCount(v.getId())).sum();
             hoursLabel = "Total Hours (All Users)";
             badgesLabel = "Total Badges (All Users)";
@@ -260,7 +261,7 @@ public class SystemUI extends JFrame {
                 .orElse(null);
             
             if (currentVol != null) {
-                displayHours = (int) currentVol.getTotalHoursWorked();
+                displayHours = (int) calculateTotalHours(currentVol.getId());
                 displayBadges = getBadgesEarnedCount(currentVol.getId());
             } else {
                 displayHours = 0;
@@ -392,7 +393,22 @@ public class SystemUI extends JFrame {
         listPanel.setBackground(CARD_BG);
         
         List<com.fstgc.vms.model.Event> events = eventController.listAll();
-        for (com.fstgc.vms.model.Event event : events.stream().limit(3).toList()) {
+        // Filter out events at capacity for non-admin users
+        Role role = authService.getCurrentUser().getRole();
+        boolean isAdmin = (role == Role.ADMIN || role == Role.SUPER_ADMIN);
+        LocalDate today = LocalDate.now();
+        
+        List<com.fstgc.vms.model.Event> filteredEvents = events.stream()
+            .filter(e -> !e.getEventDate().isBefore(today)) // Only show upcoming events
+            .filter(e -> {
+                if (isAdmin) return true; // Admins see all events
+                int totalCapacity = e.getCapacity() + e.getCurrentRegistrations();
+                return e.getCurrentRegistrations() < totalCapacity; // Hide full events for users
+            })
+            .limit(3)
+            .toList();
+        
+        for (com.fstgc.vms.model.Event event : filteredEvents) {
             listPanel.add(createEventItem(event));
             listPanel.add(Box.createVerticalStrut(10));
         }
@@ -515,9 +531,22 @@ public class SystemUI extends JFrame {
         
         item.add(contentPanel, BorderLayout.CENTER);
         
-        JButton registerBtn = createModernButton("Register", PRIMARY_BLUE);
-        registerBtn.setPreferredSize(new Dimension(100, 30));
-        item.add(registerBtn, BorderLayout.SOUTH);
+        // Show register button for all roles except SUPER_ADMIN (if event has capacity)
+        Role currentRole = authService.getCurrentUser().getRole();
+        if (currentRole != Role.SUPER_ADMIN) {
+            LocalDate today = LocalDate.now();
+            boolean canRegister = !event.getEventDate().isBefore(today) && 
+                                 event.getCurrentRegistrations() < totalCapacity &&
+                                 event.getStatus() != EventStatus.CANCELLED &&
+                                 event.getStatus() != EventStatus.COMPLETED;
+            
+            if (canRegister) {
+                JButton registerBtn = createModernButton("Register", PRIMARY_BLUE);
+                registerBtn.setPreferredSize(new Dimension(100, 30));
+                registerBtn.addActionListener(e -> registerForEvent(event.getEventId()));
+                item.add(registerBtn, BorderLayout.SOUTH);
+            }
+        }
         
         return item;
     }
@@ -589,20 +618,78 @@ public class SystemUI extends JFrame {
         titleLabel.setForeground(TEXT_PRIMARY);
         headerPanel.add(titleLabel, BorderLayout.WEST);
 
-        // If current user is a volunteer, they should not see the directory at all
+        // If current user is a volunteer, show only their own profile
         Role role = authService.getCurrentUserRole();
         if (role == Role.VOLUNTEER) {
+            // Change title to "My Profile"
+            titleLabel.setText("My Profile");
             panel.add(headerPanel, BorderLayout.NORTH);
 
-            JPanel restrictedCard = createModernCard();
-            restrictedCard.setLayout(new BorderLayout());
-            JLabel msg = new JLabel("Volunteer directory is only visible to admins and coordinators.");
-            msg.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-            msg.setForeground(TEXT_SECONDARY);
-            msg.setHorizontalAlignment(SwingConstants.CENTER);
-            restrictedCard.add(msg, BorderLayout.CENTER);
+            // Find the current user's volunteer record
+            String currentEmail = authService.getCurrentUser().getEmail();
+            Volunteer currentVolunteer = volunteerController.listAll().stream()
+                .filter(v -> v.getEmail().equals(currentEmail))
+                .findFirst()
+                .orElse(null);
 
-            panel.add(restrictedCard, BorderLayout.CENTER);
+            if (currentVolunteer == null) {
+                JPanel errorCard = createModernCard();
+                errorCard.setLayout(new BorderLayout());
+                JLabel msg = new JLabel("Your volunteer profile could not be found. Please contact an administrator.");
+                msg.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                msg.setForeground(TEXT_SECONDARY);
+                msg.setHorizontalAlignment(SwingConstants.CENTER);
+                errorCard.add(msg, BorderLayout.CENTER);
+                panel.add(errorCard, BorderLayout.CENTER);
+                return panel;
+            }
+
+            // Create profile card
+            JPanel profileCard = createModernCard();
+            profileCard.setLayout(new BorderLayout(15, 15));
+            profileCard.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+            // Profile info panel
+            JPanel infoPanel = new JPanel(new GridLayout(8, 2, 10, 15));
+            infoPanel.setBackground(CARD_BG);
+
+            infoPanel.add(createLabel("Volunteer ID:"));
+            infoPanel.add(createLabel(String.valueOf(currentVolunteer.getId())));
+            
+            infoPanel.add(createLabel("Name:"));
+            infoPanel.add(createLabel(currentVolunteer.getFirstName() + " " + currentVolunteer.getLastName()));
+            
+            infoPanel.add(createLabel("Email:"));
+            infoPanel.add(createLabel(currentVolunteer.getEmail()));
+            
+            infoPanel.add(createLabel("Phone:"));
+            infoPanel.add(createLabel(currentVolunteer.getPhone() != null ? currentVolunteer.getPhone() : "N/A"));
+            
+            infoPanel.add(createLabel("Status:"));
+            infoPanel.add(createLabel(currentVolunteer.getStatus().toString()));
+            
+            infoPanel.add(createLabel("Total Hours Worked:"));
+            infoPanel.add(createLabel(String.format("%.1f hrs", calculateTotalHours(currentVolunteer.getId()))));
+            
+            infoPanel.add(createLabel("Events Attended:"));
+            infoPanel.add(createLabel(String.valueOf(calculateEventsAttended(currentVolunteer.getId()))));
+            
+            infoPanel.add(createLabel("Registration Date:"));
+            infoPanel.add(createLabel(currentVolunteer.getRegistrationDate() != null ? 
+                currentVolunteer.getRegistrationDate().toLocalDate().toString() : "N/A"));
+
+            profileCard.add(infoPanel, BorderLayout.CENTER);
+
+            // Edit button panel
+            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
+            buttonPanel.setBackground(CARD_BG);
+            
+            JButton editBtn = createModernButton("Edit My Profile", PRIMARY_BLUE);
+            editBtn.addActionListener(e -> showEditVolunteerDialog(currentVolunteer.getId()));
+            buttonPanel.add(editBtn);
+
+            profileCard.add(buttonPanel, BorderLayout.SOUTH);
+            panel.add(profileCard, BorderLayout.CENTER);
             return panel;
         }
 
@@ -638,7 +725,7 @@ public class SystemUI extends JFrame {
                 v.getFirstName() + " " + v.getLastName(),
                 v.getEmail(),
                 v.getPhone(),
-                String.format("%.1f hrs", v.getTotalHoursWorked()),
+                String.format("%.1f hrs", calculateTotalHours(v.getId())),
                 v.getStatus(),
                 auditInfo
             });
@@ -769,7 +856,7 @@ public class SystemUI extends JFrame {
                 v.setLastModifiedDate(java.time.LocalDateTime.now());
                 v = volunteerController.register(v);
                 JOptionPane.showMessageDialog(dialog, 
-                    "Volunteer registered successfully!\nID: " + v.getId() + "\nHours: " + v.getTotalHoursWorked(),
+                    "Volunteer registered successfully!\nID: " + v.getId() + "\nHours: " + calculateTotalHours(v.getId()),
                     "Success", JOptionPane.INFORMATION_MESSAGE);
                 dialog.dispose();
                 refreshAllPanels();
@@ -813,6 +900,17 @@ public class SystemUI extends JFrame {
 
     private void showEditVolunteerDialog(int volunteerId) {
         volunteerController.get(volunteerId).ifPresentOrElse(existing -> {
+            // Check if current user is a volunteer and trying to edit someone else's profile
+            Role currentRole = authService.getCurrentUserRole();
+            String currentEmail = authService.getCurrentUser().getEmail();
+            
+            if (currentRole == Role.VOLUNTEER && !existing.getEmail().equals(currentEmail)) {
+                JOptionPane.showMessageDialog(this,
+                    "You can only edit your own profile.",
+                    "Access Denied", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
             JDialog dialog = new JDialog(this, "Edit Volunteer", true);
             dialog.setSize(450, 350);
             dialog.setLocationRelativeTo(this);
@@ -835,6 +933,11 @@ public class SystemUI extends JFrame {
             JComboBox<VolunteerStatus> statusCombo = new JComboBox<>(VolunteerStatus.values());
             statusCombo.setFont(new Font("Segoe UI", Font.PLAIN, 13));
             statusCombo.setSelectedItem(existing.getStatus());
+            
+            // Volunteers cannot change their own status
+            if (currentRole == Role.VOLUNTEER) {
+                statusCombo.setEnabled(false);
+            }
 
             formPanel.add(createLabel("First Name:"));
             formPanel.add(firstNameField);
@@ -982,6 +1085,20 @@ public class SystemUI extends JFrame {
         // Get actual badge count from award records
         return awardController.getAwardsByVolunteer(volunteerId).size();
     }
+    
+    private double calculateTotalHours(int volunteerId) {
+        // Calculate total hours from all attendance records for this volunteer
+        return attendanceController.byVolunteer(volunteerId).stream()
+            .mapToDouble(a -> a.getHoursWorked())
+            .sum();
+    }
+    
+    private int calculateEventsAttended(int volunteerId) {
+        // Calculate total events attended from attendance records for this volunteer
+        return (int) attendanceController.byVolunteer(volunteerId).stream()
+            .filter(a -> a.getCheckInTime() != null)
+            .count();
+    }
 
     private JPanel createEventPanel() {
         JPanel panel = new JPanel(new BorderLayout(15, 15));
@@ -1016,70 +1133,221 @@ public class SystemUI extends JFrame {
         // Get all events and separate them
         List<com.fstgc.vms.model.Event> allEvents = eventController.listAll();
         LocalDate today = LocalDate.now();
+        boolean isAdmin = (currentRole == Role.ADMIN || currentRole == Role.SUPER_ADMIN);
+        
+        // For non-admin users, show their registered events first
+        if (!isAdmin) {
+            // Get current volunteer's ID
+            Volunteer currentVol = volunteerController.listAll().stream()
+                .filter(v -> v.getEmail().equals(authService.getCurrentUser().getEmail()))
+                .findFirst()
+                .orElse(null);
+            
+            if (currentVol != null) {
+                // Get attendance records for this volunteer (these represent registrations)
+                List<Attendance> myAttendances = attendanceController.byVolunteer(currentVol.getId());
+                List<Integer> registeredEventIds = myAttendances.stream()
+                    .map(Attendance::getEventId)
+                    .toList();
+                
+                List<com.fstgc.vms.model.Event> myRegisteredEvents = allEvents.stream()
+                    .filter(e -> registeredEventIds.contains(e.getEventId()))
+                    .filter(e -> !e.getEventDate().isBefore(today)) // Only upcoming
+                    .filter(e -> e.getStatus() != EventStatus.COMPLETED && e.getStatus() != EventStatus.CANCELLED)
+                    .sorted((e1, e2) -> e1.getEventDate().compareTo(e2.getEventDate()))
+                    .toList();
+                
+                if (!myRegisteredEvents.isEmpty()) {
+                    JLabel myEventsLabel = new JLabel("✓ My Registered Events");
+                    myEventsLabel.setFont(getEmojiFont(20).deriveFont(Font.BOLD));
+                    myEventsLabel.setForeground(GREEN);
+                    myEventsLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+                    myEventsLabel.setBorder(new EmptyBorder(0, 0, 10, 0));
+                    contentPanel.add(myEventsLabel);
+                    
+                    JPanel myEventsGrid = new JPanel(new GridLayout(0, 3, 15, 15));
+                    myEventsGrid.setBackground(GRAY_BG);
+                    myEventsGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
+                    for (com.fstgc.vms.model.Event event : myRegisteredEvents) {
+                        myEventsGrid.add(createEventCard(event));
+                    }
+                    contentPanel.add(myEventsGrid);
+                    contentPanel.add(Box.createVerticalStrut(30));
+                }
+            }
+        }
         
         List<com.fstgc.vms.model.Event> upcomingEvents = allEvents.stream()
             .filter(e -> !e.getEventDate().isBefore(today))
             .filter(e -> e.getStatus() != EventStatus.COMPLETED && e.getStatus() != EventStatus.CANCELLED)
-            .filter(e -> e.getCurrentRegistrations() < (e.getCapacity() + e.getCurrentRegistrations())) // Hide events at capacity
+            .filter(e -> {
+                // For non-admin users, hide events at full capacity
+                if (!isAdmin) {
+                    int totalCapacity = e.getCapacity() + e.getCurrentRegistrations();
+                    return e.getCurrentRegistrations() < totalCapacity;
+                }
+                // Admins see all events
+                return true;
+            })
             .sorted((e1, e2) -> e1.getEventDate().compareTo(e2.getEventDate()))
             .toList();
             
         List<com.fstgc.vms.model.Event> pastEvents = allEvents.stream()
             .filter(e -> e.getEventDate().isBefore(today))
+            .filter(e -> e.getStatus() != EventStatus.COMPLETED && e.getStatus() != EventStatus.CANCELLED)
+            .sorted((e1, e2) -> e2.getEventDate().compareTo(e1.getEventDate())) // Most recent first
+            .toList();
+            
+        List<com.fstgc.vms.model.Event> completedEvents = allEvents.stream()
+            .filter(e -> e.getStatus() == EventStatus.COMPLETED)
+            .sorted((e1, e2) -> e2.getEventDate().compareTo(e1.getEventDate())) // Most recent first
+            .toList();
+            
+        List<com.fstgc.vms.model.Event> cancelledEvents = allEvents.stream()
+            .filter(e -> e.getStatus() == EventStatus.CANCELLED)
             .sorted((e1, e2) -> e2.getEventDate().compareTo(e1.getEventDate())) // Most recent first
             .toList();
         
+        // Create horizontal layout with 4 columns (one for each section)
+        JPanel horizontalSections = new JPanel(new GridLayout(1, 4, 15, 0));
+        horizontalSections.setBackground(GRAY_BG);
+        horizontalSections.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        
         // Upcoming Events Section
-        JLabel upcomingLabel = new JLabel("📅 Upcoming Events");
-        upcomingLabel.setFont(getEmojiFont(20).deriveFont(Font.BOLD));
+        JPanel upcomingSection = new JPanel();
+        upcomingSection.setLayout(new BoxLayout(upcomingSection, BoxLayout.Y_AXIS));
+        upcomingSection.setBackground(GRAY_BG);
+        
+        JLabel upcomingLabel = new JLabel("📅 Upcoming");
+        upcomingLabel.setFont(getEmojiFont(14).deriveFont(Font.BOLD));
         upcomingLabel.setForeground(TEXT_PRIMARY);
         upcomingLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         upcomingLabel.setBorder(new EmptyBorder(0, 0, 10, 0));
-        contentPanel.add(upcomingLabel);
+        upcomingSection.add(upcomingLabel);
         
         if (upcomingEvents.isEmpty()) {
-            JLabel noUpcomingLabel = new JLabel("No upcoming events scheduled");
-            noUpcomingLabel.setFont(new Font("Segoe UI", Font.ITALIC, 14));
+            JLabel noUpcomingLabel = new JLabel("No upcoming events");
+            noUpcomingLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
             noUpcomingLabel.setForeground(TEXT_SECONDARY);
             noUpcomingLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            noUpcomingLabel.setBorder(new EmptyBorder(10, 10, 10, 10));
-            contentPanel.add(noUpcomingLabel);
+            upcomingSection.add(noUpcomingLabel);
         } else {
-            JPanel upcomingGrid = new JPanel(new GridLayout(0, 3, 15, 15));
+            JPanel upcomingGrid = new JPanel(new GridLayout(0, 1, 0, 15));
             upcomingGrid.setBackground(GRAY_BG);
             upcomingGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
             for (com.fstgc.vms.model.Event event : upcomingEvents) {
                 upcomingGrid.add(createEventCard(event));
             }
-            contentPanel.add(upcomingGrid);
+            JScrollPane upcomingScroll = new JScrollPane(upcomingGrid);
+            upcomingScroll.setBorder(null);
+            upcomingScroll.setBackground(GRAY_BG);
+            upcomingScroll.getVerticalScrollBar().setUnitIncrement(16);
+            upcomingSection.add(upcomingScroll);
         }
         
-        contentPanel.add(Box.createVerticalStrut(30));
-        
         // Past Events Section
-        JLabel pastLabel = new JLabel("📚 Past Events");
-        pastLabel.setFont(getEmojiFont(20).deriveFont(Font.BOLD));
+        JPanel pastSection = new JPanel();
+        pastSection.setLayout(new BoxLayout(pastSection, BoxLayout.Y_AXIS));
+        pastSection.setBackground(GRAY_BG);
+        
+        JLabel pastLabel = new JLabel("📚 Past");
+        pastLabel.setFont(getEmojiFont(14).deriveFont(Font.BOLD));
         pastLabel.setForeground(TEXT_PRIMARY);
         pastLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         pastLabel.setBorder(new EmptyBorder(0, 0, 10, 0));
-        contentPanel.add(pastLabel);
+        pastSection.add(pastLabel);
         
         if (pastEvents.isEmpty()) {
             JLabel noPastLabel = new JLabel("No past events");
-            noPastLabel.setFont(new Font("Segoe UI", Font.ITALIC, 14));
+            noPastLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
             noPastLabel.setForeground(TEXT_SECONDARY);
             noPastLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            noPastLabel.setBorder(new EmptyBorder(10, 10, 10, 10));
-            contentPanel.add(noPastLabel);
+            pastSection.add(noPastLabel);
         } else {
-            JPanel pastGrid = new JPanel(new GridLayout(0, 3, 15, 15));
+            JPanel pastGrid = new JPanel(new GridLayout(0, 1, 0, 15));
             pastGrid.setBackground(GRAY_BG);
             pastGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
             for (com.fstgc.vms.model.Event event : pastEvents) {
                 pastGrid.add(createEventCard(event));
             }
-            contentPanel.add(pastGrid);
+            JScrollPane pastScroll = new JScrollPane(pastGrid);
+            pastScroll.setBorder(null);
+            pastScroll.setBackground(GRAY_BG);
+            pastScroll.getVerticalScrollBar().setUnitIncrement(16);
+            pastSection.add(pastScroll);
         }
+        
+        // Completed Events Section
+        JPanel completedSection = new JPanel();
+        completedSection.setLayout(new BoxLayout(completedSection, BoxLayout.Y_AXIS));
+        completedSection.setBackground(GRAY_BG);
+        
+        JLabel completedLabel = new JLabel("✅ Completed");
+        completedLabel.setFont(getEmojiFont(12).deriveFont(Font.BOLD));
+        completedLabel.setForeground(GREEN);
+        completedLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        completedLabel.setBorder(new EmptyBorder(0, 0, 10, 0));
+        completedSection.add(completedLabel);
+        
+        if (completedEvents.isEmpty()) {
+            JLabel noCompletedLabel = new JLabel("No completed events");
+            noCompletedLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+            noCompletedLabel.setForeground(TEXT_SECONDARY);
+            noCompletedLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            completedSection.add(noCompletedLabel);
+        } else {
+            JPanel completedGrid = new JPanel(new GridLayout(0, 1, 0, 15));
+            completedGrid.setBackground(GRAY_BG);
+            completedGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
+            for (com.fstgc.vms.model.Event event : completedEvents) {
+                completedGrid.add(createEventCard(event));
+            }
+            JScrollPane completedScroll = new JScrollPane(completedGrid);
+            completedScroll.setBorder(null);
+            completedScroll.setBackground(GRAY_BG);
+            completedScroll.getVerticalScrollBar().setUnitIncrement(16);
+            completedSection.add(completedScroll);
+        }
+        
+        // Cancelled Events Section
+        JPanel cancelledSection = new JPanel();
+        cancelledSection.setLayout(new BoxLayout(cancelledSection, BoxLayout.Y_AXIS));
+        cancelledSection.setBackground(GRAY_BG);
+        
+        JLabel cancelledLabel = new JLabel("❌ Cancelled");
+        cancelledLabel.setFont(getEmojiFont(12).deriveFont(Font.BOLD));
+        cancelledLabel.setForeground(new Color(239, 68, 68));
+        cancelledLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        cancelledLabel.setBorder(new EmptyBorder(0, 0, 10, 0));
+        cancelledSection.add(cancelledLabel);
+        
+        if (cancelledEvents.isEmpty()) {
+            JLabel noCancelledLabel = new JLabel("No cancelled events");
+            noCancelledLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+            noCancelledLabel.setForeground(TEXT_SECONDARY);
+            noCancelledLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            cancelledSection.add(noCancelledLabel);
+        } else {
+            JPanel cancelledGrid = new JPanel(new GridLayout(0, 1, 0, 15));
+            cancelledGrid.setBackground(GRAY_BG);
+            cancelledGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
+            for (com.fstgc.vms.model.Event event : cancelledEvents) {
+                cancelledGrid.add(createEventCard(event));
+            }
+            JScrollPane cancelledScroll = new JScrollPane(cancelledGrid);
+            cancelledScroll.setBorder(null);
+            cancelledScroll.setBackground(GRAY_BG);
+            cancelledScroll.getVerticalScrollBar().setUnitIncrement(16);
+            cancelledSection.add(cancelledScroll);
+        }
+        
+        // Add all sections to horizontal layout
+        horizontalSections.add(upcomingSection);
+        horizontalSections.add(pastSection);
+        horizontalSections.add(completedSection);
+        horizontalSections.add(cancelledSection);
+        
+        contentPanel.add(horizontalSections);
         
         JScrollPane scrollPane = new JScrollPane(contentPanel);
         scrollPane.setBorder(null);
@@ -1121,7 +1389,7 @@ public class SystemUI extends JFrame {
         typeLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         
         // Use emoji-supporting font for labels with emojis
-        Font emojiFont = getEmojiFont(12);
+        Font emojiFont = getEmojiFont(10);
         
         JLabel dateLabel = new JLabel("📅 " + event.getEventDate());
         dateLabel.setFont(emojiFont);
@@ -1157,8 +1425,8 @@ public class SystemUI extends JFrame {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
         buttonPanel.setBackground(CARD_BG);
         
+        // Admin controls for ADMIN and SUPER_ADMIN
         if (currentRole == Role.ADMIN || currentRole == Role.SUPER_ADMIN) {
-            // Admin buttons: Edit, Status, Delete
             JButton editBtn = new JButton("Edit");
             editBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
             editBtn.setForeground(PRIMARY_BLUE);
@@ -1198,13 +1466,15 @@ public class SystemUI extends JFrame {
             buttonPanel.add(editBtn);
             buttonPanel.add(statusBtn);
             buttonPanel.add(deleteBtn);
-        } else {
-            // Non-admin users: Register button (only if event is upcoming and not at capacity)
+        }
+        
+        // Register button for all roles except SUPER_ADMIN (if event is upcoming and not at capacity)
+        if (currentRole != Role.SUPER_ADMIN) {
             LocalDate today = LocalDate.now();
-            int totalCapacity = event.getCapacity() + event.getCurrentRegistrations();
             boolean canRegister = !event.getEventDate().isBefore(today) && 
                                  event.getCurrentRegistrations() < totalCapacity &&
-                                 event.getStatus() == EventStatus.PUBLISHED;
+                                 event.getStatus() != EventStatus.CANCELLED &&
+                                 event.getStatus() != EventStatus.COMPLETED;
             
             if (canRegister) {
                 JButton registerBtn = new JButton("Register");
@@ -1393,7 +1663,7 @@ public class SystemUI extends JFrame {
         }
         
         JDialog dialog = new JDialog(this, "Change Event Status", true);
-        dialog.setSize(400, 250);
+        dialog.setSize(450, 280);
         dialog.setLocationRelativeTo(this);
         
         JPanel mainPanel = new JPanel(new BorderLayout(15, 15));
@@ -1489,17 +1759,44 @@ public class SystemUI extends JFrame {
             JOptionPane.QUESTION_MESSAGE);
             
         if (confirm == JOptionPane.YES_OPTION) {
-            // Increment registration count
-            event.setCurrentRegistrations(event.getCurrentRegistrations() + 1);
-            event.setLastModifiedBy(authService.getCurrentUser().getUsername());
-            event.setLastModifiedDate(LocalDateTime.now());
+            // Get current volunteer's ID
+            Volunteer currentVol = volunteerController.listAll().stream()
+                .filter(v -> v.getEmail().equals(authService.getCurrentUser().getEmail()))
+                .findFirst()
+                .orElse(null);
             
-            eventController.update(event);
+            if (currentVol == null) {
+                JOptionPane.showMessageDialog(this, 
+                    "Unable to find volunteer profile. Please contact administrator.", 
+                    "Error", 
+                    JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
+            // Check if already registered (has attendance record for this event)
+            List<Attendance> existingAttendances = attendanceController.byVolunteer(currentVol.getId());
+            boolean alreadyRegistered = existingAttendances.stream()
+                .anyMatch(a -> a.getEventId() == eventId);
+            
+            if (alreadyRegistered) {
+                JOptionPane.showMessageDialog(this, 
+                    "You are already registered for this event!", 
+                    "Already Registered", 
+                    JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
+            // Create attendance record to track registration
+            // This will also increment registration count and decrease capacity
+            attendanceController.checkIn(currentVol.getId(), eventId);
+            
+            // Refresh event to get updated counts
+            event = eventController.get(eventId);
+            int newTotalCapacity = event.getCapacity() + event.getCurrentRegistrations();
             
             // Check if event is now at capacity
-            int newTotal = event.getCapacity() + event.getCurrentRegistrations();
             String message = "Successfully registered for " + event.getTitle() + "!";
-            if (event.getCurrentRegistrations() >= newTotal) {
+            if (event.getCurrentRegistrations() >= newTotalCapacity) {
                 message += "\n\nThis event is now at full capacity.";
             }
             
@@ -1554,11 +1851,11 @@ public class SystemUI extends JFrame {
         JPanel tableCard = createModernCard();
         tableCard.setLayout(new BorderLayout());
         
-        String[] columnNames = {"ID", "Volunteer ID", "Event ID", "Check In", "Check Out", "Hours", "Status", "Action"};
+        String[] columnNames = {"ID", "Volunteer ID", "Event ID", "Check In", "Check Out", "Hours", "Status", "Actions"};
         DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return false;
+                return column == 7; // Only Actions column is editable
             }
         };
         JTable table = createModernTable(tableModel);
@@ -1573,26 +1870,78 @@ public class SystemUI extends JFrame {
                 a.getCheckOutTime(),
                 String.format("%.1f hrs", a.getHoursWorked()),
                 a.getStatus(),
-                "Update Status"
+                "Actions"
             });
         }
         
-        // Add button column renderer and editor
-        table.getColumn("Action").setCellRenderer((tbl, value, isSelected, hasFocus, row, column) -> {
-            JButton btn = createModernButton("Update Status", PURPLE);
-            btn.setPreferredSize(new Dimension(120, 30));
-            return btn;
+        // Add button column renderer and editor for Actions
+        table.getColumn("Actions").setCellRenderer((tbl, value, isSelected, hasFocus, row, column) -> {
+            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 2));
+            buttonPanel.setBackground(isSelected ? table.getSelectionBackground() : table.getBackground());
+            
+            JButton editHoursBtn = new JButton("Edit Hours");
+            editHoursBtn.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+            editHoursBtn.setForeground(PRIMARY_BLUE);
+            editHoursBtn.setBackground(Color.WHITE);
+            editHoursBtn.setBorder(BorderFactory.createLineBorder(PRIMARY_BLUE, 1));
+            editHoursBtn.setFocusPainted(false);
+            editHoursBtn.setPreferredSize(new Dimension(80, 25));
+            
+            JButton statusBtn = new JButton("Status");
+            statusBtn.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+            statusBtn.setForeground(PURPLE);
+            statusBtn.setBackground(Color.WHITE);
+            statusBtn.setBorder(BorderFactory.createLineBorder(PURPLE, 1));
+            statusBtn.setFocusPainted(false);
+            statusBtn.setPreferredSize(new Dimension(60, 25));
+            
+            buttonPanel.add(editHoursBtn);
+            buttonPanel.add(statusBtn);
+            return buttonPanel;
         });
         
-        table.getColumn("Action").setCellEditor(new DefaultCellEditor(new JCheckBox()) {
+        table.getColumn("Actions").setCellEditor(new DefaultCellEditor(new JCheckBox()) {
+            private JPanel panel;
+            
             @Override
             public Component getTableCellEditorComponent(JTable tbl, Object value, boolean isSelected, int row, int column) {
-                JButton btn = createModernButton("Update Status", PURPLE);
-                btn.addActionListener(e -> {
+                panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 2));
+                panel.setBackground(tbl.getSelectionBackground());
+                
+                JButton editHoursBtn = new JButton("Edit Hours");
+                editHoursBtn.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+                editHoursBtn.setForeground(PRIMARY_BLUE);
+                editHoursBtn.setBackground(Color.WHITE);
+                editHoursBtn.setBorder(BorderFactory.createLineBorder(PRIMARY_BLUE, 1));
+                editHoursBtn.setFocusPainted(false);
+                editHoursBtn.setPreferredSize(new Dimension(80, 25));
+                editHoursBtn.addActionListener(e -> {
+                    int attendanceId = (int) tbl.getValueAt(row, 0);
+                    SystemUI.this.showEditAttendanceHoursDialog(attendanceId);
+                    fireEditingStopped();
+                });
+                
+                JButton statusBtn = new JButton("Status");
+                statusBtn.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+                statusBtn.setForeground(PURPLE);
+                statusBtn.setBackground(Color.WHITE);
+                statusBtn.setBorder(BorderFactory.createLineBorder(PURPLE, 1));
+                statusBtn.setFocusPainted(false);
+                statusBtn.setPreferredSize(new Dimension(60, 25));
+                statusBtn.addActionListener(e -> {
                     int attendanceId = (int) tbl.getValueAt(row, 0);
                     SystemUI.this.showUpdateAttendanceStatusDialog(attendanceId);
+                    fireEditingStopped();
                 });
-                return btn;
+                
+                panel.add(editHoursBtn);
+                panel.add(statusBtn);
+                return panel;
+            }
+            
+            @Override
+            public Object getCellEditorValue() {
+                return "Actions";
             }
         });
         
@@ -1606,14 +1955,14 @@ public class SystemUI extends JFrame {
     
     private void showAttendanceDialog() {
         JDialog dialog = new JDialog(this, "Record Attendance", true);
-        dialog.setSize(450, 300);
+        dialog.setSize(450, 350);
         dialog.setLocationRelativeTo(this);
         
         JPanel mainPanel = new JPanel(new BorderLayout(15, 15));
         mainPanel.setBackground(CARD_BG);
         mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
         
-        JPanel formPanel = new JPanel(new GridLayout(3, 2, 10, 15));
+        JPanel formPanel = new JPanel(new GridLayout(4, 2, 10, 15));
         formPanel.setBackground(CARD_BG);
         
         // Check user role to determine if volunteer ID should be auto-populated
@@ -1636,11 +1985,59 @@ public class SystemUI extends JFrame {
             }
         }
         
+        // Get published and completed events for dropdown
+        List<Event> availableEvents = eventController.listAll().stream()
+            .filter(e -> e.getStatus() == EventStatus.PUBLISHED || e.getStatus() == EventStatus.COMPLETED)
+            .sorted((e1, e2) -> e1.getEventDate().compareTo(e2.getEventDate()))
+            .collect(java.util.stream.Collectors.toList());
+        
+        // Create event dropdown with custom display
+        JComboBox<Event> eventComboBox = new JComboBox<>();
+        eventComboBox.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        eventComboBox.addItem(null); // Add empty option
+        for (Event event : availableEvents) {
+            eventComboBox.addItem(event);
+        }
+        
+        // Custom renderer to display event info nicely
+        eventComboBox.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value == null) {
+                    setText("-- Select an Event --");
+                } else if (value instanceof Event) {
+                    Event event = (Event) value;
+                    setText(String.format("#%d - %s (%s) - %s", 
+                        event.getEventId(), 
+                        event.getTitle(),
+                        event.getStatus(),
+                        event.getEventDate()));
+                }
+                return this;
+            }
+        });
+        
         JTextField eventIdField = createModernTextField();
+        eventIdField.setEditable(false);
+        eventIdField.setBackground(new Color(240, 240, 240));
+        
+        // Update event ID field when event is selected from dropdown
+        eventComboBox.addActionListener(e -> {
+            Event selectedEvent = (Event) eventComboBox.getSelectedItem();
+            if (selectedEvent != null) {
+                eventIdField.setText(String.valueOf(selectedEvent.getEventId()));
+            } else {
+                eventIdField.setText("");
+            }
+        });
+        
         JTextField attendanceIdField = createModernTextField();
         
         formPanel.add(createLabel("Volunteer ID:"));
         formPanel.add(volunteerIdField);
+        formPanel.add(createLabel("Select Event:"));
+        formPanel.add(eventComboBox);
         formPanel.add(createLabel("Event ID:"));
         formPanel.add(eventIdField);
         formPanel.add(createLabel("Attendance ID (Check-out):"));
@@ -1776,15 +2173,13 @@ public class SystemUI extends JFrame {
         statsPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         
         statsPanel.add(createLabel("Total Hours:"));
-        JLabel hoursLabel = new JLabel(String.format("%.1f hrs", vol.getTotalHoursWorked()));
+        JLabel hoursLabel = new JLabel(String.format("%.1f hrs", calculateTotalHours(vol.getId())));
         hoursLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
         statsPanel.add(hoursLabel);
         
         statsPanel.add(createLabel("Events Attended:"));
         // Count actual events attended from attendance records
-        int eventsAttended = (int) attendanceController.byVolunteer(vol.getId()).stream()
-            .filter(a -> a.getCheckInTime() != null)
-            .count();
+        int eventsAttended = calculateEventsAttended(vol.getId());
         JLabel eventsLabel = new JLabel(String.valueOf(eventsAttended));
         eventsLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
         statsPanel.add(eventsLabel);
@@ -1799,6 +2194,37 @@ public class SystemUI extends JFrame {
         statsPanel.add(statusLabel);
         
         contentPanel.add(statsPanel);
+        contentPanel.add(Box.createVerticalStrut(10));
+        
+        // Show timesheet events
+        List<Timesheet> volunteerTimesheets = timesheetController.listAll().stream()
+            .filter(ts -> ts.getVolunteerId() == vol.getId())
+            .filter(ts -> ts.getEventName() != null) // Only show timesheets with events
+            .limit(3) // Show max 3 recent events
+            .toList();
+        
+        if (!volunteerTimesheets.isEmpty()) {
+            JPanel eventsPanel = new JPanel();
+            eventsPanel.setLayout(new BoxLayout(eventsPanel, BoxLayout.Y_AXIS));
+            eventsPanel.setBackground(CARD_BG);
+            eventsPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            
+            JLabel eventsTitle = new JLabel("Recent Events:");
+            eventsTitle.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            eventsTitle.setForeground(TEXT_SECONDARY);
+            eventsPanel.add(eventsTitle);
+            eventsPanel.add(Box.createVerticalStrut(5));
+            
+            for (Timesheet ts : volunteerTimesheets) {
+                JLabel eventLabel = new JLabel("• " + ts.getEventName() + " (" + String.format("%.1f", ts.getTotalHours()) + " hrs)");
+                eventLabel.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+                eventLabel.setForeground(TEXT_PRIMARY);
+                eventsPanel.add(eventLabel);
+            }
+            
+            contentPanel.add(eventsPanel);
+        }
+        
         card.add(contentPanel, BorderLayout.CENTER);
         
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
@@ -2342,6 +2768,95 @@ public class SystemUI extends JFrame {
         return item;
     }
 
+    private void showEditAttendanceHoursDialog(int attendanceId) {
+        Attendance attendance = attendanceController.byId(attendanceId);
+        if (attendance == null) {
+            JOptionPane.showMessageDialog(this, "Attendance record not found!", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
+        JDialog dialog = new JDialog(this, "Edit Attendance Hours", true);
+        dialog.setSize(450, 250);
+        dialog.setLocationRelativeTo(this);
+        
+        JPanel mainPanel = new JPanel(new BorderLayout(15, 15));
+        mainPanel.setBackground(CARD_BG);
+        mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        
+        JPanel formPanel = new JPanel(new GridLayout(3, 2, 10, 15));
+        formPanel.setBackground(CARD_BG);
+        
+        JLabel infoLabel = new JLabel("Attendance ID: " + attendanceId);
+        infoLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        infoLabel.setForeground(TEXT_PRIMARY);
+        
+        JLabel currentHoursLabel = new JLabel("Current Hours: " + String.format("%.1f hrs", attendance.getHoursWorked()));
+        currentHoursLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        currentHoursLabel.setForeground(TEXT_SECONDARY);
+        
+        JTextField hoursField = createModernTextField();
+        hoursField.setText(String.format("%.1f", attendance.getHoursWorked()));
+        
+        formPanel.add(infoLabel);
+        formPanel.add(new JLabel());
+        formPanel.add(currentHoursLabel);
+        formPanel.add(new JLabel());
+        formPanel.add(createLabel("New Hours:"));
+        formPanel.add(hoursField);
+        
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        buttonPanel.setBackground(CARD_BG);
+        
+        JButton cancelBtn = createModernButton("Cancel", TEXT_SECONDARY);
+        cancelBtn.addActionListener(e -> dialog.dispose());
+        
+        JButton saveBtn = createModernButton("Save Hours", PRIMARY_BLUE);
+        saveBtn.addActionListener(e -> {
+            try {
+                double newHours = Double.parseDouble(hoursField.getText());
+                if (newHours < 0) {
+                    JOptionPane.showMessageDialog(dialog, 
+                        "Hours cannot be negative!", 
+                        "Invalid Input", 
+                        JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                
+                attendance.setHoursWorked(newHours);
+                attendance.setLastModifiedBy(authService.getCurrentUser().getUsername());
+                attendance.setLastModifiedDate(LocalDateTime.now());
+                
+                attendanceController.update(attendance);
+                
+                JOptionPane.showMessageDialog(dialog, 
+                    "Attendance hours updated to " + String.format("%.1f", newHours) + " hours!",
+                    "Success", 
+                    JOptionPane.INFORMATION_MESSAGE);
+                dialog.dispose();
+                refreshAllPanels();
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(dialog, 
+                    "Please enter a valid number for hours!", 
+                    "Invalid Input", 
+                    JOptionPane.ERROR_MESSAGE);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(dialog, 
+                    "Error: " + ex.getMessage(), 
+                    "Error", 
+                    JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        
+        buttonPanel.add(cancelBtn);
+        buttonPanel.add(saveBtn);
+        
+        mainPanel.add(formPanel, BorderLayout.CENTER);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        dialog.add(mainPanel);
+        dialog.setVisible(true);
+    }
+
     private void showUpdateAttendanceStatusDialog(int attendanceId) {
         JDialog dialog = new JDialog(this, "Update Attendance Status", true);
         dialog.setSize(400, 200);
@@ -2488,7 +3003,8 @@ public class SystemUI extends JFrame {
         
         // Let admin select which timesheet to edit
         String[] options = timesheets.stream()
-            .map(ts -> "ID: " + ts.getTimesheetId() + " | " + ts.getPeriodStartDate() + " to " + ts.getPeriodEndDate() + " | " + ts.getTotalHours() + " hrs")
+            .map(ts -> "ID: " + ts.getTimesheetId() + " | " + ts.getPeriodStartDate() + " to " + ts.getPeriodEndDate() + " | " + ts.getTotalHours() + " hrs" + 
+                (ts.getEventName() != null ? " | Event: " + ts.getEventName() : ""))
             .toArray(String[]::new);
         
         String selected = (String) JOptionPane.showInputDialog(
@@ -2519,12 +3035,20 @@ public class SystemUI extends JFrame {
         mainPanel.setBackground(CARD_BG);
         mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
         
-        JPanel formPanel = new JPanel(new GridLayout(5, 2, 10, 15));
+        JPanel formPanel = new JPanel(new GridLayout(7, 2, 10, 15));
         formPanel.setBackground(CARD_BG);
         
         JTextField idField = createModernTextField();
         idField.setText(String.valueOf(timesheet.getTimesheetId()));
         idField.setEditable(false);
+        
+        JTextField eventIdField = createModernTextField();
+        eventIdField.setText(timesheet.getEventId() != null ? String.valueOf(timesheet.getEventId()) : "N/A");
+        eventIdField.setEditable(false);
+        
+        JTextField eventNameField = createModernTextField();
+        eventNameField.setText(timesheet.getEventName() != null ? timesheet.getEventName() : "N/A");
+        eventNameField.setEditable(false);
         
         JTextField startDateField = createModernTextField();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
@@ -2547,6 +3071,10 @@ public class SystemUI extends JFrame {
         
         formPanel.add(createLabel("Timesheet ID:"));
         formPanel.add(idField);
+        formPanel.add(createLabel("Event ID:"));
+        formPanel.add(eventIdField);
+        formPanel.add(createLabel("Event Name:"));
+        formPanel.add(eventNameField);
         formPanel.add(createLabel("Start Date (MM-DD-YYYY):"));
         formPanel.add(startDateField);
         formPanel.add(createLabel("End Date (MM-DD-YYYY):"));
@@ -2569,7 +3097,10 @@ public class SystemUI extends JFrame {
                 timesheet.setPeriodStartDate(LocalDate.parse(startDateField.getText(), inputFormatter));
                 timesheet.setPeriodEndDate(LocalDate.parse(endDateField.getText(), inputFormatter));
                 timesheet.setTotalHours(Double.parseDouble(totalHoursField.getText()));
-                timesheet.setApprovalStatus((TimesheetStatus) statusCombo.getSelectedItem());
+                // Only allow admins to change status, volunteers keep existing status
+                if (canChangeStatus) {
+                    timesheet.setApprovalStatus((TimesheetStatus) statusCombo.getSelectedItem());
+                }
                 timesheet.setLastModifiedBy(authService.getCurrentUser().getUsername());
                 timesheet.setLastModifiedDate(LocalDateTime.now());
                 

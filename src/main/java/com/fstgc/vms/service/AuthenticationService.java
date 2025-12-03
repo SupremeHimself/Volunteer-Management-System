@@ -80,6 +80,10 @@ public class AuthenticationService {
         adminRepository.updatePassword(admin.getId(), admin.getPasswordHash());
         
         this.currentUser = admin;
+        
+        // Auto-create volunteer record if it doesn't exist (except for SUPER_ADMIN)
+        ensureVolunteerRecordExists(admin);
+        
         return true;
     }
 
@@ -133,6 +137,38 @@ public class AuthenticationService {
         }
 
         return true;
+    }
+
+    /**
+     * Ensures that a Volunteer record exists for the given SystemAdmin user.
+     * Automatically creates a volunteer record if one doesn't exist (except for SUPER_ADMIN role).
+     * This allows users to be registered under the volunteer tab upon login.
+     */
+    private void ensureVolunteerRecordExists(SystemAdmin admin) {
+        // Skip volunteer creation for SUPER_ADMIN role
+        if (admin.getRole() == Role.SUPER_ADMIN) {
+            return;
+        }
+        
+        try {
+            // Check if volunteer record already exists by email
+            Optional<Volunteer> existingVolunteer = volunteerService.getByEmail(admin.getEmail());
+            
+            if (existingVolunteer.isEmpty()) {
+                // Create new volunteer record
+                Volunteer volunteer = new Volunteer();
+                volunteer.setFirstName(admin.getFirstName());
+                volunteer.setLastName(admin.getLastName());
+                volunteer.setEmail(admin.getEmail());
+                volunteer.setPhone(admin.getPhone());
+                volunteer.setLastModifiedBy("System");
+                volunteerService.register(volunteer, "System");
+                System.out.println("Auto-created volunteer record for: " + admin.getEmail());
+            }
+        } catch (Exception e) {
+            // Don't block login if volunteer creation fails, just log the error
+            System.err.println("Warning: Failed to auto-create volunteer record for " + admin.getEmail() + ": " + e.getMessage());
+        }
     }
 
     public String hashPassword(String password) {

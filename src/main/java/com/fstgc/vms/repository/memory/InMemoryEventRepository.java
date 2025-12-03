@@ -66,8 +66,18 @@ public class InMemoryEventRepository implements EventRepository {
     }
 
     @Override
-    public Event update(Event event) { store.put(event.getEventId(), event); return event; }
+    public Event update(Event event) { 
+        store.put(event.getEventId(), event); 
+        DataPersistence.saveEvents(store);
+        return event; 
+    }
 
     @Override
-    public boolean delete(int id) { return store.remove(id) != null; }
+    public boolean delete(int id) { 
+        boolean removed = store.remove(id) != null;
+        if (removed) {
+            DataPersistence.saveEvents(store);
+        }
+        return removed;
+    }
 }

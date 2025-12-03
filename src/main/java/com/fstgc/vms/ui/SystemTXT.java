@@ -23,8 +23,9 @@ public class SystemTXT {
         VolunteerService volunteerService = new VolunteerService(new InMemoryVolunteerRepository());
         InMemoryEventRepository eventRepository = new InMemoryEventRepository();
         EventService eventService = new EventService(eventRepository);
-        AttendanceService attendanceService = new AttendanceService(new InMemoryAttendanceRepository(), eventRepository);
-        TimesheetService timesheetService = new TimesheetService(new InMemoryTimesheetRepository(), new InMemoryAttendanceRepository());
+        InMemoryTimesheetRepository timesheetRepository = new InMemoryTimesheetRepository();
+        AttendanceService attendanceService = new AttendanceService(new InMemoryAttendanceRepository(), eventRepository, timesheetRepository);
+        TimesheetService timesheetService = new TimesheetService(timesheetRepository, new InMemoryAttendanceRepository());
         AnnouncementService announcementService = new AnnouncementService(new InMemoryAnnouncementRepository());
 
         this.volunteerController = new VolunteerController(volunteerService);
