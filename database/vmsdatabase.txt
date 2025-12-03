@@ -5,6 +5,7 @@
       "status": "ACTIVE",
       "lastModifiedBy": "csharpe",
       "lastModifiedDate": "2025-12-02T23:44:37.9685926",
+      "eventsAttended": 0,
       "badgesEarned": 0,
       "id": 1,
       "firstName": "Carl",

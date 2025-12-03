@@ -189,6 +189,10 @@ public class LoginDialog extends JDialog {
     }
     
     private JPanel createSignupPanel() {
+        // Outer container so we can embed the form in a scroll pane
+        JPanel container = new JPanel(new BorderLayout());
+        container.setBackground(Color.WHITE);
+
         JPanel formPanel = new JPanel();
         formPanel.setBackground(Color.WHITE);
         formPanel.setLayout(new BoxLayout(formPanel, BoxLayout.Y_AXIS));

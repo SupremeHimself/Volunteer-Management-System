@@ -10,6 +10,8 @@ public class Volunteer extends Person {
     private String profilePhotoUrl;
     private LocalDate dateOfBirth;
     private String address;
+    // Number of events this volunteer has attended; new volunteers start at 0
+    private int eventsAttended = 0;
     private String lastModifiedBy;
     private LocalDateTime lastModifiedDate;
     private int badgesEarned = 0;
@@ -24,6 +26,10 @@ public class Volunteer extends Person {
     public void setDateOfBirth(LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }
     public String getAddress() { return address; }
     public void setAddress(String address) { this.address = address; }
+
+    public int getEventsAttended() { return eventsAttended; }
+    public void setEventsAttended(int eventsAttended) { this.eventsAttended = eventsAttended; }
+
     public String getLastModifiedBy() { return lastModifiedBy; }
     public void setLastModifiedBy(String lastModifiedBy) { this.lastModifiedBy = lastModifiedBy; }
     public LocalDateTime getLastModifiedDate() { return lastModifiedDate; }

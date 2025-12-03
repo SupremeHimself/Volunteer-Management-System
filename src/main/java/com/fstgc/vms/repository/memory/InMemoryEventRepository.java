@@ -1,8 +1,6 @@
 package com.fstgc.vms.repository.memory;
 
 import com.fstgc.vms.model.Event;
-import com.fstgc.vms.model.enums.EventStatus;
-import com.fstgc.vms.model.enums.EventType;
 import com.fstgc.vms.repository.EventRepository;
 import com.fstgc.vms.util.DataPersistence;
 import java.time.LocalDate;

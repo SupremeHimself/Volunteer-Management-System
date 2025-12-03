@@ -1,7 +1,6 @@
 package com.fstgc.vms.repository.memory;
 
 import com.fstgc.vms.model.Award;
-import com.fstgc.vms.model.enums.BadgeTier;
 import com.fstgc.vms.repository.AwardRepository;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;

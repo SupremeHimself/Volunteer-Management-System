@@ -59,6 +59,7 @@ public class VolunteerService {
         }).orElse(false); 
     }
     public Optional<Volunteer> get(int id) { return repository.findById(id); }
+
     public List<Volunteer> list() { return repository.findAll(); }
     public void delete(int id) { repository.delete(id); }
 }
