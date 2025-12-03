@@ -63,11 +63,16 @@ public class InMemoryAnnouncementRepository implements AnnouncementRepository {
         int id = seq.getAndIncrement();
         announcement.setAnnouncementId(id);
         store.put(id, announcement);
+        DataPersistence.saveAnnouncements(store);
         return announcement;
     }
 
     @Override
-    public Announcement update(Announcement announcement) { store.put(announcement.getAnnouncementId(), announcement); return announcement; }
+    public Announcement update(Announcement announcement) { 
+        store.put(announcement.getAnnouncementId(), announcement); 
+        DataPersistence.saveAnnouncements(store);
+        return announcement; 
+    }
 
     @Override
     public boolean softDelete(int id) {

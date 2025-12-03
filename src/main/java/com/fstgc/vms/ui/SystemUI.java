@@ -190,7 +190,17 @@ public class SystemUI extends JFrame {
                 if (confirm == JOptionPane.YES_OPTION) {
                     authService.logout();
                     dispose();
-                    System.exit(0);
+                    // Show login dialog again instead of exiting
+                    SwingUtilities.invokeLater(() -> {
+                        LoginDialog loginDialog = new LoginDialog(null, authService);
+                        loginDialog.setVisible(true);
+                        if (loginDialog.isAuthenticated()) {
+                            SystemUI gui = new SystemUI(authService);
+                            gui.launch();
+                        } else {
+                            System.exit(0);
+                        }
+                    });
                 }
             });
             
@@ -1184,12 +1194,33 @@ public class SystemUI extends JFrame {
             }
         }
         
+        // Get registered event IDs for filtering (only for non-admin users)
+        List<Integer> registeredEventIds = new ArrayList<>();
+        if (!isAdmin) {
+            Volunteer currentVol = volunteerController.listAll().stream()
+                .filter(v -> v.getEmail().equals(authService.getCurrentUser().getEmail()))
+                .findFirst()
+                .orElse(null);
+            if (currentVol != null) {
+                List<Attendance> myAttendances = attendanceController.byVolunteer(currentVol.getId());
+                registeredEventIds = myAttendances.stream()
+                    .map(Attendance::getEventId)
+                    .toList();
+            }
+        }
+        
+        final List<Integer> finalRegisteredEventIds = registeredEventIds;
         List<com.fstgc.vms.model.Event> upcomingEvents = allEvents.stream()
             .filter(e -> !e.getEventDate().isBefore(today))
             .filter(e -> e.getStatus() != EventStatus.COMPLETED && e.getStatus() != EventStatus.CANCELLED)
             .filter(e -> {
-                // For non-admin users, hide events at full capacity
+                // For non-admin users, hide events at full capacity OR already registered for
                 if (!isAdmin) {
+                    // Hide if already registered
+                    if (finalRegisteredEventIds.contains(e.getEventId())) {
+                        return false;
+                    }
+                    // Hide if at full capacity
                     int totalCapacity = e.getCapacity() + e.getCurrentRegistrations();
                     return e.getCurrentRegistrations() < totalCapacity;
                 }
