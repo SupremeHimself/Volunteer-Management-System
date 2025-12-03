@@ -1358,6 +1358,35 @@ public class SystemUI extends JFrame {
         typeLabel.setBorder(new EmptyBorder(3, 8, 3, 8));
         typeLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         
+        // Show status badge for admins
+        Role currentUserRole = authService.getCurrentUser().getRole();
+        JLabel statusLabel = null;
+        if (currentUserRole == Role.ADMIN || currentUserRole == Role.SUPER_ADMIN) {
+            statusLabel = new JLabel(event.getStatus().toString());
+            statusLabel.setFont(new Font("Segoe UI", Font.BOLD, 10));
+            statusLabel.setForeground(Color.WHITE);
+            statusLabel.setOpaque(true);
+            // Color based on status
+            switch (event.getStatus()) {
+                case DRAFT:
+                    statusLabel.setBackground(TEXT_SECONDARY);
+                    break;
+                case PUBLISHED:
+                    statusLabel.setBackground(GREEN);
+                    break;
+                case COMPLETED:
+                    statusLabel.setBackground(PRIMARY_BLUE);
+                    break;
+                case CANCELLED:
+                    statusLabel.setBackground(new Color(239, 68, 68));
+                    break;
+                default:
+                    statusLabel.setBackground(TEXT_SECONDARY);
+            }
+            statusLabel.setBorder(new EmptyBorder(3, 8, 3, 8));
+            statusLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        }
+        
         // Use emoji-supporting font for labels with emojis
         Font emojiFont = getEmojiFont(10);
         
@@ -1381,6 +1410,10 @@ public class SystemUI extends JFrame {
         contentPanel.add(titleLabel);
         contentPanel.add(Box.createVerticalStrut(5));
         contentPanel.add(typeLabel);
+        if (statusLabel != null) {
+            contentPanel.add(Box.createVerticalStrut(5));
+            contentPanel.add(statusLabel);
+        }
         contentPanel.add(Box.createVerticalStrut(10));
         contentPanel.add(dateLabel);
         contentPanel.add(Box.createVerticalStrut(3));

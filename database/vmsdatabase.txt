@@ -23,8 +23,10 @@
       "capacity": 99,
       "currentRegistrations": 1,
       "eventType": "COMMUNITY_SERVICE",
-      "status": "DRAFT",
-      "createdByAdminId": 0
+      "status": "PUBLISHED",
+      "createdByAdminId": 0,
+      "lastModifiedBy": "admin",
+      "lastModifiedDate": "2025-12-03T15:55:58.8263343"
     },
     "2": {
       "eventId": 2,
@@ -34,8 +36,10 @@
       "capacity": 249,
       "currentRegistrations": 1,
       "eventType": "COMMUNITY_SERVICE",
-      "status": "DRAFT",
-      "createdByAdminId": 0
+      "status": "PUBLISHED",
+      "createdByAdminId": 0,
+      "lastModifiedBy": "admin",
+      "lastModifiedDate": "2025-12-03T15:56:08.6087442"
     },
     "3": {
       "eventId": 3,
@@ -91,7 +95,7 @@
       "username": "admin",
       "passwordHash": "JAvlGPq9JyTdtvBO6x2llnRI1+gxwIyPqCKAn3THIKk\u003d",
       "role": "SUPER_ADMIN",
-      "lastLogin": "2025-12-03T15:51:53.7101361",
+      "lastLogin": "2025-12-03T15:55:45.5886158",
       "failedLoginAttempts": 0,
       "accountStatus": "ACTIVE",
       "createdDate": "2025-12-02T21:50:19.3207691",
