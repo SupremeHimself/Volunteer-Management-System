@@ -388,7 +388,8 @@ public class LoginDialog extends JDialog {
         String password = new String(signupPasswordField.getPassword());
         String confirmPassword = new String(signupConfirmPasswordField.getPassword());
 
-        if (username.isEmpty() || firstName.isEmpty() || lastName.isEmpty() || email.isEmpty() || password.isEmpty()) {
+        // Check if all fields are filled
+        if (username.isEmpty() || firstName.isEmpty() || lastName.isEmpty() || email.isEmpty() || phone.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
             JOptionPane.showMessageDialog(this,
                 "Please fill in all required fields.",
                 "Signup Failed",
@@ -396,22 +397,49 @@ public class LoginDialog extends JDialog {
             return;
         }
 
-        if (!password.equals(confirmPassword)) {
+        // Validate email format
+        if (!isValidEmail(email)) {
             JOptionPane.showMessageDialog(this,
-                "Passwords do not match.",
-                "Signup Failed",
+                "Please enter a valid email address.\nExample: user@example.com",
+                "Invalid Email",
                 JOptionPane.WARNING_MESSAGE);
             return;
         }
 
+        // Validate phone format (allow only digits, spaces, hyphens, parentheses, and + sign)
+        if (!isValidPhone(phone)) {
+            JOptionPane.showMessageDialog(this,
+                "Please enter a valid phone number.\nPhone should contain only digits, spaces, hyphens, parentheses, or + symbol.\nExample: 123-456-7890 or +1 (123) 456-7890",
+                "Invalid Phone Number",
+                JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Check password match (case-sensitive comparison)
+        if (!password.equals(confirmPassword)) {
+            JOptionPane.showMessageDialog(this,
+                "Passwords do not match. Please ensure both password fields contain identical values.",
+                "Password Mismatch",
+                JOptionPane.WARNING_MESSAGE);
+            signupPasswordField.setText("");
+            signupConfirmPasswordField.setText("");
+            signupPasswordField.requestFocus();
+            return;
+        }
+
+        // Check password length
         if (password.length() < 6) {
             JOptionPane.showMessageDialog(this,
                 "Password must be at least 6 characters long.",
-                "Signup Failed",
+                "Weak Password",
                 JOptionPane.WARNING_MESSAGE);
+            signupPasswordField.setText("");
+            signupConfirmPasswordField.setText("");
+            signupPasswordField.requestFocus();
             return;
         }
 
+        // Attempt registration
         if (authService.register(username, firstName, lastName, email, phone, password)) {
             JOptionPane.showMessageDialog(this,
                 "Account created successfully! You can now sign in.",
@@ -420,12 +448,45 @@ public class LoginDialog extends JDialog {
             // Switch to login panel
             cardLayout.show(cardPanel, "LOGIN");
             usernameField.setText(username);
+            // Clear signup fields
+            clearSignupFields();
         } else {
             JOptionPane.showMessageDialog(this,
                 "Username or email already exists. Please use different credentials.",
                 "Signup Failed",
                 JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    private boolean isValidEmail(String email) {
+        // Basic email validation pattern
+        String emailPattern = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
+        return email.matches(emailPattern);
+    }
+
+    private boolean isValidPhone(String phone) {
+        // Phone can contain digits, spaces, hyphens, parentheses, and + sign
+        // Must have at least 10 characters (excluding formatting)
+        String phoneDigitsOnly = phone.replaceAll("[^0-9]", "");
+        
+        // Allow phone numbers with at least 10 digits
+        if (phoneDigitsOnly.length() < 10) {
+            return false;
+        }
+        
+        // Check if phone contains only valid characters
+        String validPhonePattern = "^[0-9\\s\\-()+]+$";
+        return phone.matches(validPhonePattern);
+    }
+
+    private void clearSignupFields() {
+        signupUsernameField.setText("");
+        signupFirstNameField.setText("");
+        signupLastNameField.setText("");
+        signupEmailField.setText("");
+        signupPhoneField.setText("");
+        signupPasswordField.setText("");
+        signupConfirmPasswordField.setText("");
     }
 
     public boolean isAuthenticated() {

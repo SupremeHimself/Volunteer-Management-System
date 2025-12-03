@@ -148,4 +148,11 @@ public class AttendanceService {
     }
     
     public List<Attendance> listAll() { return repository.findAll(); }
+    
+    public boolean isVolunteerRegisteredForEvent(int volunteerId, int eventId) {
+        // Check if volunteer has an attendance record for this event
+        List<Attendance> attendances = repository.findByVolunteer(volunteerId);
+        return attendances.stream()
+            .anyMatch(a -> a.getEventId() == eventId);
+    }
 }

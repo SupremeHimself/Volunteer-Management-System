@@ -34,4 +34,8 @@ public class AttendanceController {
     }
     
     public java.util.List<Attendance> listAll() { return service.listAll(); }
+    
+    public boolean isVolunteerRegisteredForEvent(int volunteerId, int eventId) {
+        return service.isVolunteerRegisteredForEvent(volunteerId, eventId);
+    }
 }
