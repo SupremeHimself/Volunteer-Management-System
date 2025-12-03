@@ -1,11 +1,11 @@
 # Volunteer Management System (Java)
 
-A modern desktop application built with Java Swing that provides comprehensive volunteer management capabilities for the FSTGC Volunteer Management System.
+A modern desktop application built with Java Swing that provides comprehensive volunteer management capabilities for the FSTGC.
 
 ## Features
 
 ### Authentication & Security
-- Secure login/signup system with SHA-256 password hashing
+- Secure login/signup system with password hashing
 - Login with username OR email
 - Role-based access control (SUPER_ADMIN, ADMIN, COORDINATOR, VOLUNTEER)
 - Account lockout after 5 failed login attempts
@@ -24,7 +24,7 @@ A modern desktop application built with Java Swing that provides comprehensive v
   - Upcoming Events → Events tab  
   - Total Hours → Timesheets tab
   - Badges Earned → Awards tab
-- **Volunteer Management** - Full CRUD operations for volunteers
+- **Volunteer Management** - Full Create, Read, Update, Delete (CRUD) operations for volunteers
   - Register new volunteers
   - View and search volunteer records
   - Edit volunteer information (Admin/Super Admin only)
