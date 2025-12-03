@@ -2865,6 +2865,10 @@ public class SystemUI extends JFrame {
                     "Success", 
                     JOptionPane.INFORMATION_MESSAGE);
                 dialog.dispose();
+                
+                // Check and award badges based on updated total hours
+                checkAndAwardBadges(attendance.getVolunteerId());
+                
                 refreshAllPanels();
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(dialog, 
@@ -3258,7 +3262,7 @@ public class SystemUI extends JFrame {
             com.fstgc.vms.model.Award award = awardBadgeIfNotExists(volunteerId, "First Steps", 
                 "Completed 10 hours of volunteer work",
                 com.fstgc.vms.model.enums.BadgeTier.BRONZE,
-                com.fstgc.vms.model.enums.CriteriaType.HOURS_COMPLETED, 10);
+                com.fstgc.vms.model.enums.CriteriaType.TOTAL_HOURS, 10);
             if (award != null) newBadges.add("🥉 First Steps (10 hours)");
         }
         
@@ -3266,7 +3270,7 @@ public class SystemUI extends JFrame {
             com.fstgc.vms.model.Award award = awardBadgeIfNotExists(volunteerId, "Dedicated Helper",
                 "Completed 25 hours of volunteer work",
                 com.fstgc.vms.model.enums.BadgeTier.BRONZE,
-                com.fstgc.vms.model.enums.CriteriaType.HOURS_COMPLETED, 25);
+                com.fstgc.vms.model.enums.CriteriaType.TOTAL_HOURS, 25);
             if (award != null) newBadges.add("🥉 Dedicated Helper (25 hours)");
         }
         
@@ -3274,7 +3278,7 @@ public class SystemUI extends JFrame {
             com.fstgc.vms.model.Award award = awardBadgeIfNotExists(volunteerId, "Community Champion",
                 "Completed 50 hours of volunteer work",
                 com.fstgc.vms.model.enums.BadgeTier.SILVER,
-                com.fstgc.vms.model.enums.CriteriaType.HOURS_COMPLETED, 50);
+                com.fstgc.vms.model.enums.CriteriaType.TOTAL_HOURS, 50);
             if (award != null) newBadges.add("🥈 Community Champion (50 hours)");
         }
         
@@ -3282,7 +3286,7 @@ public class SystemUI extends JFrame {
             com.fstgc.vms.model.Award award = awardBadgeIfNotExists(volunteerId, "Elite Volunteer",
                 "Completed 100 hours of volunteer work",
                 com.fstgc.vms.model.enums.BadgeTier.GOLD,
-                com.fstgc.vms.model.enums.CriteriaType.HOURS_COMPLETED, 100);
+                com.fstgc.vms.model.enums.CriteriaType.TOTAL_HOURS, 100);
             if (award != null) newBadges.add("🥇 Elite Volunteer (100 hours)");
         }
         
@@ -3291,7 +3295,7 @@ public class SystemUI extends JFrame {
             com.fstgc.vms.model.Award award = awardBadgeIfNotExists(volunteerId, "Event Enthusiast",
                 "Attended 5 events",
                 com.fstgc.vms.model.enums.BadgeTier.BRONZE,
-                com.fstgc.vms.model.enums.CriteriaType.EVENTS_ATTENDED, 5);
+                com.fstgc.vms.model.enums.CriteriaType.EVENT_COUNT, 5);
             if (award != null) newBadges.add("🥉 Event Enthusiast (5 events)");
         }
         
@@ -3299,7 +3303,7 @@ public class SystemUI extends JFrame {
             com.fstgc.vms.model.Award award = awardBadgeIfNotExists(volunteerId, "Regular Attendee",
                 "Attended 10 events",
                 com.fstgc.vms.model.enums.BadgeTier.SILVER,
-                com.fstgc.vms.model.enums.CriteriaType.EVENTS_ATTENDED, 10);
+                com.fstgc.vms.model.enums.CriteriaType.EVENT_COUNT, 10);
             if (award != null) newBadges.add("🥈 Regular Attendee (10 events)");
         }
         
@@ -3307,7 +3311,7 @@ public class SystemUI extends JFrame {
             com.fstgc.vms.model.Award award = awardBadgeIfNotExists(volunteerId, "Event Master",
                 "Attended 20 events",
                 com.fstgc.vms.model.enums.BadgeTier.GOLD,
-                com.fstgc.vms.model.enums.CriteriaType.EVENTS_ATTENDED, 20);
+                com.fstgc.vms.model.enums.CriteriaType.EVENT_COUNT, 20);
             if (award != null) newBadges.add("🥇 Event Master (20 events)");
         }
         
