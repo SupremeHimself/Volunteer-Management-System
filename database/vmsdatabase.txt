@@ -44,11 +44,7 @@
       "username": "admin",
       "passwordHash": "JAvlGPq9JyTdtvBO6x2llnRI1+gxwIyPqCKAn3THIKk\u003d",
       "role": "SUPER_ADMIN",
-<<<<<<< HEAD
       "lastLogin": "2025-12-02T23:46:29.6568804",
-=======
-      "lastLogin": "2025-12-02T23:38:48.2804942",
->>>>>>> 614f91a9b6ff30be77efadfe8d39397a71832be2
       "failedLoginAttempts": 0,
       "accountStatus": "ACTIVE",
       "createdDate": "2025-12-02T21:50:19.3207691",
