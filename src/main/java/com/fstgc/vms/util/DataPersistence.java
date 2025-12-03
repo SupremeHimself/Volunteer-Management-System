@@ -76,6 +76,7 @@ public class DataPersistence {
         Map<Integer, Announcement> announcements = new HashMap<>();
         Map<Integer, Timesheet> timesheets = new HashMap<>();
         Map<Integer, SystemAdmin> admins = new HashMap<>();
+        Map<Integer, Award> awards = new HashMap<>();
     }
 
     public static void initialize() {
@@ -170,5 +171,14 @@ public class DataPersistence {
 
     public static Map<Integer, SystemAdmin> loadAdmins() {
         return new HashMap<>(database.admins);
+    }
+
+    public static void saveAwards(Map<Integer, Award> awards) {
+        database.awards = new HashMap<>(awards);
+        saveDatabase();
+    }
+
+    public static Map<Integer, Award> loadAwards() {
+        return new HashMap<>(database.awards);
     }
 }

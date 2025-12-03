@@ -2664,9 +2664,13 @@ public class SystemUI extends JFrame {
         JPanel badgesGrid = new JPanel(new GridLayout(1, 4, 15, 0));
         badgesGrid.setBackground(CARD_BG);
         
-        // Calculate actual badge counts by tier from all volunteers
+        // Calculate actual badge counts by tier from active volunteers only
         int bronzeCount = 0, silverCount = 0, goldCount = 0, platinumCount = 0;
         for (Volunteer vol : volunteerController.listAll()) {
+            // Skip inactive volunteers
+            if (vol.getStatus() != VolunteerStatus.ACTIVE) {
+                continue;
+            }
             List<com.fstgc.vms.model.Award> awards = awardController.getAwardsByVolunteer(vol.getId());
             for (com.fstgc.vms.model.Award award : awards) {
                 switch (award.getBadgeTier()) {
@@ -2700,8 +2704,11 @@ public class SystemUI extends JFrame {
         leaderList.setLayout(new BoxLayout(leaderList, BoxLayout.Y_AXIS));
         leaderList.setBackground(CARD_BG);
         
-        List<Volunteer> volunteers = volunteerController.listAll();
-        volunteers.sort((a, b) -> Integer.compare(getBadgesEarnedCount(b.getId()), getBadgesEarnedCount(a.getId())));
+        // Filter to only active volunteers and sort by badge count
+        List<Volunteer> volunteers = volunteerController.listAll().stream()
+            .filter(v -> v.getStatus() == VolunteerStatus.ACTIVE)
+            .sorted((a, b) -> Integer.compare(getBadgesEarnedCount(b.getId()), getBadgesEarnedCount(a.getId())))
+            .toList();
         
         Color[] medalColors = {new Color(255, 215, 0), new Color(192, 192, 192), new Color(205, 127, 50)};
         int rank = 1;

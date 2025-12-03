@@ -118,7 +118,7 @@
       "username": "csharpe",
       "passwordHash": "75K3eLr+dx6JJFuJ7LwIpEpOFmwGZZkRiB84PURz6U8\u003d",
       "role": "VOLUNTEER",
-      "lastLogin": "2025-12-03T17:36:55.603652",
+      "lastLogin": "2025-12-03T17:40:15.9375149",
       "failedLoginAttempts": 0,
       "accountStatus": "ACTIVE",
       "createdDate": "2025-12-02T23:43:47.4293635",
@@ -128,5 +128,6 @@
       "email": "carl.sharpe@test.com",
       "phone": "18761234567"
     }
-  }
+  },
+  "awards": {}
 }
