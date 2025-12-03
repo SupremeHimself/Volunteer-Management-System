@@ -22,12 +22,12 @@ public class SystemTXT {
 
     public SystemTXT() {
         // Wire dependencies
-        ValidationService validationService = new ValidationService();
-        VolunteerService volunteerService = new VolunteerService(new InMemoryVolunteerRepository(), validationService);
-        EventService eventService = new EventService(new InMemoryEventRepository());
-        AttendanceService attendanceService = new AttendanceService(new InMemoryAttendanceRepository());
+        VolunteerService volunteerService = new VolunteerService(new InMemoryVolunteerRepository());
+        InMemoryEventRepository eventRepository = new InMemoryEventRepository();
+        EventService eventService = new EventService(eventRepository);
+        AttendanceService attendanceService = new AttendanceService(new InMemoryAttendanceRepository(), eventRepository);
         TimesheetService timesheetService = new TimesheetService(new InMemoryTimesheetRepository(), new InMemoryAttendanceRepository());
-        AnnouncementService announcementService = new AnnouncementService(new InMemoryAnnouncementRepository(), new NotificationService());
+        AnnouncementService announcementService = new AnnouncementService(new InMemoryAnnouncementRepository());
         AwardService awardService = new AwardService(new InMemoryAwardRepository());
 
         this.volunteerController = new VolunteerController(volunteerService);

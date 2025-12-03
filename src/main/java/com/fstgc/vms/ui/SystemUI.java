@@ -51,8 +51,9 @@ public class SystemUI extends JFrame {
         
         // Initialize services and controllers
         VolunteerService volunteerService = new VolunteerService(new InMemoryVolunteerRepository());
-        EventService eventService = new EventService(new InMemoryEventRepository());
-        AttendanceService attendanceService = new AttendanceService(new InMemoryAttendanceRepository());
+        InMemoryEventRepository eventRepository = new InMemoryEventRepository();
+        EventService eventService = new EventService(eventRepository);
+        AttendanceService attendanceService = new AttendanceService(new InMemoryAttendanceRepository(), eventRepository);
         TimesheetService timesheetService = new TimesheetService(new InMemoryTimesheetRepository(), new InMemoryAttendanceRepository());
         AnnouncementService announcementService = new AnnouncementService(new InMemoryAnnouncementRepository());
 
@@ -448,19 +449,35 @@ public class SystemUI extends JFrame {
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
         titleLabel.setForeground(TEXT_PRIMARY);
         
+        // Create date label with emoji support
         JLabel dateLabel = new JLabel("📅 " + event.getEventDate() + " | 📍 " + event.getLocation());
-        dateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        // Set emoji-supporting font
+        Font emojiFont = null;
+        String[] fontNames = {"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", "Segoe UI Symbol", "Dialog"};
+        for (String fontName : fontNames) {
+            Font testFont = new Font(fontName, Font.PLAIN, 12);
+            if (testFont.getFamily().equals(fontName) || testFont.canDisplayUpTo("📅📍") == -1) {
+                emojiFont = testFont;
+                break;
+            }
+        }
+        if (emojiFont == null) {
+            emojiFont = new Font(Font.SANS_SERIF, Font.PLAIN, 12);
+        }
+        dateLabel.setFont(emojiFont);
         dateLabel.setForeground(TEXT_SECONDARY);
         
-        JLabel capacityLabel = new JLabel("Capacity: " + event.getCapacity());
-        capacityLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        capacityLabel.setForeground(TEXT_SECONDARY);
+        // Add registration counter
+        int totalCapacity = event.getCapacity() + event.getCurrentRegistrations();
+        JLabel registeredLabel = new JLabel("Registered: " + event.getCurrentRegistrations() + " | Capacity: " + totalCapacity);
+        registeredLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        registeredLabel.setForeground(TEXT_SECONDARY);
         
         contentPanel.add(titleLabel);
         contentPanel.add(Box.createVerticalStrut(3));
         contentPanel.add(dateLabel);
         contentPanel.add(Box.createVerticalStrut(3));
-        contentPanel.add(capacityLabel);
+        contentPanel.add(registeredLabel);
         
         item.add(contentPanel, BorderLayout.CENTER);
         
@@ -902,18 +919,23 @@ public class SystemUI extends JFrame {
         typeLabel.setBorder(new EmptyBorder(3, 8, 3, 8));
         typeLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         
+        // Use emoji-supporting font for labels with emojis
+        Font emojiFont = getEmojiFont(12);
+        
         JLabel dateLabel = new JLabel("📅 " + event.getEventDate());
-        dateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        dateLabel.setFont(emojiFont);
         dateLabel.setForeground(TEXT_SECONDARY);
         dateLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         
         JLabel locationLabel = new JLabel("📍 " + (event.getLocation() != null ? event.getLocation() : "TBD"));
-        locationLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        locationLabel.setFont(emojiFont);
         locationLabel.setForeground(TEXT_SECONDARY);
         locationLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         
-        JLabel capacityLabel = new JLabel("👥 Capacity: " + event.getCapacity());
-        capacityLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        // Show registered count and total capacity
+        int totalCapacity = event.getCapacity() + event.getCurrentRegistrations();
+        JLabel capacityLabel = new JLabel("👥 Registered: " + event.getCurrentRegistrations() + " | Capacity: " + totalCapacity);
+        capacityLabel.setFont(emojiFont);
         capacityLabel.setForeground(TEXT_SECONDARY);
         capacityLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         
