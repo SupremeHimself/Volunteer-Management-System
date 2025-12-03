@@ -1,6 +1,18 @@
 {
   "volunteers": {},
-  "events": {},
+  "events": {
+    "1": {
+      "eventId": 1,
+      "title": "Christmas Day Outreach Programme",
+      "eventDate": "2025-12-25",
+      "location": "UWI Mona",
+      "capacity": 100,
+      "currentRegistrations": 0,
+      "eventType": "COMMUNITY_SERVICE",
+      "status": "DRAFT",
+      "createdByAdminId": 0
+    }
+  },
   "attendance": {},
   "announcements": {},
   "timesheets": {},
@@ -9,7 +21,7 @@
       "username": "admin",
       "passwordHash": "JAvlGPq9JyTdtvBO6x2llnRI1+gxwIyPqCKAn3THIKk\u003d",
       "role": "SUPER_ADMIN",
-      "lastLogin": "2025-12-02T22:03:01.2511839",
+      "lastLogin": "2025-12-02T23:20:32.167038",
       "failedLoginAttempts": 0,
       "accountStatus": "ACTIVE",
       "createdDate": "2025-12-02T21:50:19.3207691",

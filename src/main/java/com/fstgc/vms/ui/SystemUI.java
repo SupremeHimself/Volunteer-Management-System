@@ -982,7 +982,8 @@ public class SystemUI extends JFrame {
         
         JTextField titleField = createModernTextField();
         JTextField dateField = createModernTextField();
-        dateField.setText(LocalDate.now().toString());
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
+        dateField.setText(LocalDate.now().format(formatter));
         JTextField locationField = createModernTextField();
         JTextField capacityField = createModernTextField();
         JComboBox<EventType> typeCombo = new JComboBox<>(EventType.values());
@@ -1008,9 +1009,10 @@ public class SystemUI extends JFrame {
         JButton saveBtn = createModernButton("Create", GREEN);
         saveBtn.addActionListener(e -> {
             try {
+                DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
                 com.fstgc.vms.model.Event event = eventController.create(
                     titleField.getText(),
-                    LocalDate.parse(dateField.getText()),
+                    LocalDate.parse(dateField.getText(), inputFormatter),
                     Integer.parseInt(capacityField.getText()),
                     (EventType) typeCombo.getSelectedItem(),
                     locationField.getText()
@@ -1996,10 +1998,11 @@ public class SystemUI extends JFrame {
         JButton submitBtn = createModernButton("Submit", GREEN);
         submitBtn.addActionListener(e -> {
             try {
+                DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
                 Timesheet ts = timesheetController.submit(
                     volunteerId,
-                    LocalDate.parse(startDateField.getText()),
-                    LocalDate.parse(endDateField.getText()),
+                    LocalDate.parse(startDateField.getText(), inputFormatter),
+                    LocalDate.parse(endDateField.getText(), inputFormatter),
                     (TimesheetStatus) statusCombo.getSelectedItem()
                 );
                 JOptionPane.showMessageDialog(dialog, 
@@ -2161,9 +2164,10 @@ public class SystemUI extends JFrame {
         }
         
         JTextField startDateField = createModernTextField();
-        startDateField.setText(LocalDate.now().withDayOfMonth(1).toString());
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
+        startDateField.setText(LocalDate.now().withDayOfMonth(1).format(formatter));
         JTextField endDateField = createModernTextField();
-        endDateField.setText(LocalDate.now().toString());
+        endDateField.setText(LocalDate.now().format(formatter));
         JComboBox<TimesheetStatus> statusCombo = new JComboBox<>(TimesheetStatus.values());
         statusCombo.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         
@@ -2195,10 +2199,11 @@ public class SystemUI extends JFrame {
                 }
                 int volunteerId = Integer.parseInt(selected.split(" - ")[0]);
                 
+                DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
                 Timesheet ts = timesheetController.submit(
                     volunteerId,
-                    LocalDate.parse(startDateField.getText()),
-                    LocalDate.parse(endDateField.getText()),
+                    LocalDate.parse(startDateField.getText(), inputFormatter),
+                    LocalDate.parse(endDateField.getText(), inputFormatter),
                     (TimesheetStatus) statusCombo.getSelectedItem()
                 );
                 JOptionPane.showMessageDialog(dialog, 
