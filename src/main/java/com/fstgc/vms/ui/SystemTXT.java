@@ -21,8 +21,9 @@ public class SystemTXT {
     public SystemTXT() {
         // Wire dependencies
         VolunteerService volunteerService = new VolunteerService(new InMemoryVolunteerRepository());
-        EventService eventService = new EventService(new InMemoryEventRepository());
-        AttendanceService attendanceService = new AttendanceService(new InMemoryAttendanceRepository());
+        InMemoryEventRepository eventRepository = new InMemoryEventRepository();
+        EventService eventService = new EventService(eventRepository);
+        AttendanceService attendanceService = new AttendanceService(new InMemoryAttendanceRepository(), eventRepository);
         TimesheetService timesheetService = new TimesheetService(new InMemoryTimesheetRepository(), new InMemoryAttendanceRepository());
         AnnouncementService announcementService = new AnnouncementService(new InMemoryAnnouncementRepository());
 
