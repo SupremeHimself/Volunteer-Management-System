@@ -21,9 +21,9 @@ A modern desktop application built with Java Swing that provides comprehensive v
 ### Core Functionality
 - **Dashboard** - Interactive overview with clickable statistics cards that navigate to relevant sections
   - Active Volunteers → Volunteers tab
-  - Upcoming Events → Events tab  
-  - Total Hours → Timesheets tab
-  - Badges Earned → Awards tab
+  - Upcoming Events → Events tab (counts only events with date ≥ today)
+  - Total Hours → Timesheets tab (My Hours for volunteers, Total Hours for admins)
+  - Badges Earned → Awards tab (My Badges for volunteers, Total Badges for admins)
 - **Volunteer Management** - Full Create, Read, Update, Delete (CRUD) operations for volunteers
   - Register new volunteers
   - View and search volunteer records
@@ -33,18 +33,24 @@ A modern desktop application built with Java Swing that provides comprehensive v
 - **Event Management** - Complete event lifecycle management
   - Create and schedule events with capacity tracking
   - Edit event details (Admin/Super Admin only)
+  - Change event status (Admin/Super Admin only)
   - Delete events with confirmation (Admin/Super Admin only)
+  - Event status badges visible to admins (DRAFT, PUBLISHED, COMPLETED, CANCELLED)
+  - Three-column grid layout: Upcoming | Past & Completed | Cancelled
   - Date format: MM-DD-YYYY
   - Audit tracking for all modifications
 - **Attendance Tracking** - Record and monitor volunteer attendance
-  - Check-in/check-out system
-  - Automatic hours calculation (rounded up to nearest hour)
+  - Direct hours entry system (simplified from check-in/check-out)
+  - Record attendance with volunteer ID, event, and hours worked
+  - Automatic timesheet creation with event details
   - Attendance history per volunteer
 - **Timesheet Management** - Track and approve volunteer hours
-  - Generate timesheets for specific periods
+  - Automatic timesheet creation when attendance is recorded
+  - Timesheets include event ID and event name
+  - Timesheet dates match event dates automatically
   - Admin/Super Admin can edit timesheet details
-  - Approval workflow with status tracking
-  - Hours automatically rounded up to nearest whole hour
+  - Approval workflow with status tracking (PENDING, APPROVED, REJECTED)
+  - Volunteers can only submit as PENDING status
 - **Announcements** - Communication system with priority management
   - Create, edit, and delete announcements (Admin/Super Admin only)
   - Priority levels: LOW, MEDIUM, HIGH, URGENT
@@ -127,9 +133,11 @@ Admins (ADMIN and SUPER_ADMIN roles) have additional capabilities:
 - All date inputs use **MM-DD-YYYY** format
 - Examples: 12-02-2025, 01-15-2026
 
-## Hours Calculation
-- Attendance hours are automatically **rounded up** to the nearest whole hour
-- Example: 2.3 hours → 3 hours, 4.7 hours → 5 hours
+## Attendance & Hours
+- Users enter total hours worked directly when recording attendance
+- No check-in/check-out process - simplified to hours entry
+- Timesheets are automatically created when attendance is recorded
+- Timesheet dates automatically match the event date
 - Admins can manually adjust hours in timesheet editing
 
 ## Notes
@@ -174,15 +182,18 @@ Admins (ADMIN and SUPER_ADMIN roles) have additional capabilities:
 - Supports event lifecycle management (PLANNED, ONGOING, COMPLETED, CANCELLED)
 
 **`Attendance.java`** - Attendance tracking record
-- Properties: `attendanceId`, `volunteerId`, `eventId`, `checkInTime`, `checkOutTime`, `hoursWorked`, `status`, `feedback`
+- Properties: `attendanceId`, `volunteerId`, `eventId`, `checkInTime` (timestamp), `hoursWorked`, `status`, `feedback`
 - Links volunteers to events they attend
-- Automatically calculates hours worked (rounded up to nearest hour)
-- Updates event registration counts on check-in
+- Hours worked entered directly by user
+- Updates event registration counts when recorded
+- Automatically creates linked timesheet with event details
 - Tracks attendance status (PRESENT, ABSENT, LATE, EXCUSED)
 
 **`Timesheet.java`** - Hour approval workflow
-- Properties: `timesheetId`, `volunteerId`, `periodStartDate`, `periodEndDate`, `totalHours`, `approvedHours`, `approvalStatus`, `approvedByAdminId`, `approvalDate`, `rejectionReason`, audit fields
-- Aggregates attendance hours for approval periods
+- Properties: `timesheetId`, `volunteerId`, `eventId`, `eventName`, `periodStartDate`, `periodEndDate`, `totalHours`, `approvedHours`, `approvalStatus`, `approvedByAdminId`, `approvalDate`, `rejectionReason`, audit fields
+- Automatically created when attendance is recorded
+- Includes event ID and event name for tracking
+- Period dates automatically match event date
 - Supports approval workflow (PENDING, APPROVED, REJECTED)
 - Default status is PENDING; volunteers/coordinators can submit but not change status
 - Only admins can approve/reject timesheets and modify status
@@ -379,18 +390,18 @@ Located in `repository/memory/` package - all extend their respective interfaces
   - Event status management
   - Integration with attendance tracking
 
-**`AttendanceService.java`** - Attendance tracking and hours calculation
-- **Purpose**: Manages check-in/check-out and hours calculation
+**`AttendanceService.java`** - Attendance tracking and hours recording
+- **Purpose**: Manages attendance recording with direct hours entry
 - **Key Methods**:
-  - `checkIn(volunteerId, eventId)` - Records volunteer check-in, decrements event capacity
-  - `checkOut(attendanceId)` - Records check-out, calculates hours (rounded up)
+  - `recordAttendance(volunteerId, eventId, hoursWorked)` - Records attendance with hours, decrements event capacity
   - `deleteAttendance(attendanceId)` - Removes attendance, restores event capacity
-  - `calculateHours(checkIn, checkOut)` - Computes hours worked
+  - `createTimesheetForAttendance(volunteerId, event, hours)` - Automatically creates timesheet with event details
   - `getVolunteerAttendance(volunteerId)` - Retrieves attendance history
 - **Features**:
-  - Automatic hours calculation with rounding
+  - Direct hours entry (no check-in/check-out)
+  - Automatic timesheet creation with event ID and name
+  - Timesheet dates match event date automatically
   - Updates event registration counts
-  - Prevents duplicate check-ins
   - Reverses capacity changes on deletion
 
 **`TimesheetService.java`** - Timesheet approval workflow
@@ -485,9 +496,9 @@ Controllers act as the bridge between UI and Service layers, delegating business
 
 **`AttendanceController.java`**
 - **Purpose**: Coordinates attendance operations
-- **Key Methods**: `checkIn()`, `checkOut()`, `byVolunteer()`, `byEvent()`, `listAll()`, `delete()`
+- **Key Methods**: `recordAttendance(volunteerId, eventId, hoursWorked)`, `byVolunteer()`, `byEvent()`, `listAll()`, `delete()`
 - **Dependencies**: AttendanceService
-- **Role**: Manages attendance workflow
+- **Role**: Manages attendance recording with direct hours entry
 
 **`TimesheetController.java`**
 - **Purpose**: Coordinates timesheet operations
@@ -537,8 +548,8 @@ Controllers act as the bridge between UI and Service layers, delegating business
 - **Key Components**:
   - `createDashboardPanel()` - Statistics cards with click navigation, role-based stats display
   - `createVolunteerPanel()` - Volunteer table with CRUD operations
-  - `createEventPanel()` - Split into "Upcoming Events" and "Past Events" sections
-  - `createAttendancePanel()` - Attendance records table with check-in/out
+  - `createEventPanel()` - Three-column grid: Upcoming | Past & Completed | Cancelled
+  - `createAttendancePanel()` - Attendance records table with hours entry
   - `createTimesheetPanel()` - Timesheet management with approval workflow
   - `createAwardPanel()` - Badge leaderboard and tier statistics
   - `createAnnouncementPanel()` - Priority-coded announcements with color borders
@@ -546,8 +557,8 @@ Controllers act as the bridge between UI and Service layers, delegating business
   - VOLUNTEER/COORDINATOR: Read-only access, can submit timesheets, auto-populated volunteer ID in attendance
   - ADMIN/SUPER_ADMIN: Full CRUD access, can create events/announcements, approve timesheets, edit/delete records
 - **Dialog Methods**:
-  - Event dialogs: `showAddEventDialog()`, `showEditEventDialog()`, `deleteEvent()`
-  - Attendance dialogs: `showAttendanceDialog()` (auto-populates volunteer ID for non-admins)
+  - Event dialogs: `showAddEventDialog()`, `showEditEventDialog()`, `showChangeEventStatusDialog()`, `deleteEvent()`
+  - Attendance dialogs: `showAttendanceDialog()` (auto-populates volunteer ID for non-admins, requires hours entry)
   - Timesheet dialogs: `showSubmitTimesheetDialog()` (status hidden for non-admins), `showEditTimesheetDialog()` (status disabled for non-admins), `showCreateTimesheetDialog()`
   - Announcement dialogs: `showAddAnnouncementDialog()`, `showEditAnnouncementDialog()`, `deleteAnnouncement()`
 - **Features**:
@@ -642,21 +653,24 @@ Controllers act as the bridge between UI and Service layers, delegating business
 
 ---
 
-## Data Flow Example: Check-In Process
+## Data Flow Example: Recording Attendance
 
-1. **User Action**: User clicks "Check In" in attendance dialog
-2. **UI Layer**: `SystemUI.showAttendanceDialog()` captures volunteerId and eventId
-3. **Controller**: Calls `AttendanceController.checkIn(volunteerId, eventId)`
-4. **Service**: `AttendanceService.checkIn()`:
+1. **User Action**: User enters hours and clicks "Record Attendance" in dialog
+2. **UI Layer**: `SystemUI.showAttendanceDialog()` captures volunteerId, eventId, and hoursWorked
+3. **Controller**: Calls `AttendanceController.recordAttendance(volunteerId, eventId, hoursWorked)`
+4. **Service**: `AttendanceService.recordAttendance()`:
    - Validates volunteer and event exist
-   - Creates new Attendance record with check-in time
+   - Creates new Attendance record with current timestamp and hours
    - Updates Event: `currentRegistrations++`, `capacity--`
+   - Automatically creates Timesheet with event ID, event name, and hours
+   - Timesheet period dates set to match event date
    - Saves attendance to repository
    - Returns Attendance object
 5. **Repository**: `InMemoryAttendanceRepository.save()` stores in ConcurrentHashMap
-6. **Persistence**: `DataPersistence.saveData()` serializes all data to disk
-7. **UI Update**: Dialog shows success message, refreshes all panels
-8. **Dashboard**: Updated statistics reflect new attendance
+6. **Timesheet**: `InMemoryTimesheetRepository.save()` stores linked timesheet
+7. **Persistence**: `DataPersistence.saveData()` serializes all data to disk
+8. **UI Update**: Dialog shows success message, refreshes all panels
+9. **Dashboard**: Updated statistics reflect new attendance and hours
 
 ---
 
@@ -667,14 +681,15 @@ Controllers act as the bridge between UI and Service layers, delegating business
 - **Admins**: See system-wide "Total Hours (All Users)" and "Total Badges (All Users)"
 
 ### Events Panel
-- **All Users**: View upcoming and past events (split into sections)
+- **All Users**: View events in three columns (Upcoming | Past & Completed | Cancelled)
 - **Volunteers/Coordinators**: No create/edit/delete buttons
-- **Admins**: "Create Event" button visible, Edit/Delete buttons on event cards
+- **Admins**: "Create Event" button visible, Edit/Status/Delete buttons on event cards, status badges shown
 
 ### Attendance Panel
-- **All Users**: Can record attendance
-- **Volunteers/Coordinators**: Volunteer ID auto-populated and read-only
-- **Admins**: Can enter any volunteer ID
+- **All Users**: Can record attendance with hours entry
+- **Volunteers/Coordinators**: Volunteer ID auto-populated and read-only, enter hours worked
+- **Admins**: Can enter any volunteer ID and hours
+- **Table Columns**: ID, Volunteer ID, Event ID, Hours, Status, Actions
 
 ### Timesheets Panel
 - **All Users**: Can view timesheets
@@ -714,10 +729,11 @@ Controllers act as the bridge between UI and Service layers, delegating business
 - Consistent MM-DD-YYYY format throughout UI
 - `DateTimeFormatter` for parsing and display
 
-### Hours Calculation
-- `Duration.between()` for time difference
-- Always rounds UP to nearest hour using `Math.ceil()`
-- Example: 2.1 hours → 3 hours, 4.9 hours → 5 hours
+### Hours Recording
+- Direct entry of hours worked in attendance dialog
+- No automatic calculation - users specify exact hours
+- Hours stored as entered (no rounding)
+- Example: User enters 2.5 hours → stored as 2.5 hours
 
 ### Emoji Support
 - Font detection for emoji rendering
