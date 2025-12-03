@@ -7,7 +7,6 @@ import com.fstgc.vms.repository.memory.*;
 import com.fstgc.vms.service.*;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Scanner;
 
 public class SystemTXT {
@@ -18,24 +17,20 @@ public class SystemTXT {
     private final AttendanceController attendanceController;
     private final TimesheetController timesheetController;
     private final AnnouncementController announcementController;
-    private final AwardController awardController;
 
     public SystemTXT() {
         // Wire dependencies
-        ValidationService validationService = new ValidationService();
-        VolunteerService volunteerService = new VolunteerService(new InMemoryVolunteerRepository(), validationService);
+        VolunteerService volunteerService = new VolunteerService(new InMemoryVolunteerRepository());
         EventService eventService = new EventService(new InMemoryEventRepository());
         AttendanceService attendanceService = new AttendanceService(new InMemoryAttendanceRepository());
         TimesheetService timesheetService = new TimesheetService(new InMemoryTimesheetRepository(), new InMemoryAttendanceRepository());
-        AnnouncementService announcementService = new AnnouncementService(new InMemoryAnnouncementRepository(), new NotificationService());
-        AwardService awardService = new AwardService(new InMemoryAwardRepository());
+        AnnouncementService announcementService = new AnnouncementService(new InMemoryAnnouncementRepository());
 
         this.volunteerController = new VolunteerController(volunteerService);
         this.eventController = new EventController(eventService);
         this.attendanceController = new AttendanceController(attendanceService);
         this.timesheetController = new TimesheetController(timesheetService);
         this.announcementController = new AnnouncementController(announcementService);
-        this.awardController = new AwardController(awardService);
     }
 
     public void run() {

@@ -1,7 +1,6 @@
 package com.fstgc.vms.repository.memory;
 
 import com.fstgc.vms.model.Volunteer;
-import com.fstgc.vms.model.enums.VolunteerStatus;
 import com.fstgc.vms.repository.VolunteerRepository;
 import com.fstgc.vms.util.DataPersistence;
 import java.util.*;

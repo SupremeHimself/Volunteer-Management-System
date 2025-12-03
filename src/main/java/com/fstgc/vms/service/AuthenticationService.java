@@ -20,7 +20,7 @@ public class AuthenticationService {
     public AuthenticationService(AdminRepository adminRepository) {
         this.adminRepository = adminRepository;
         // Separate volunteer service used only for signups; persists via DataPersistence
-        this.volunteerService = new VolunteerService(new InMemoryVolunteerRepository(), new ValidationService());
+        this.volunteerService = new VolunteerService(new InMemoryVolunteerRepository());
         // Create default admin if none exists
         initializeDefaultAdmin();
     }
