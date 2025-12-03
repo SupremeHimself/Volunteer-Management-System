@@ -3,9 +3,9 @@
     "1": {
       "registrationDate": "2025-12-02T23:44:37.9685926",
       "status": "ACTIVE",
+      "eventsAttended": 0,
       "lastModifiedBy": "csharpe",
       "lastModifiedDate": "2025-12-02T23:44:37.9685926",
-      "eventsAttended": 0,
       "badgesEarned": 0,
       "id": 1,
       "firstName": "Carl",
@@ -36,6 +36,17 @@
       "eventType": "COMMUNITY_SERVICE",
       "status": "DRAFT",
       "createdByAdminId": 0
+    },
+    "3": {
+      "eventId": 3,
+      "title": "Labor Day Campus Clean-Up",
+      "eventDate": "2025-10-20",
+      "location": "Faculty Of Science \u0026 Technology, UWI Mona",
+      "capacity": 50,
+      "currentRegistrations": 0,
+      "eventType": "COMMUNITY_SERVICE",
+      "status": "DRAFT",
+      "createdByAdminId": 0
     }
   },
   "attendance": {},
@@ -46,7 +57,7 @@
       "username": "admin",
       "passwordHash": "JAvlGPq9JyTdtvBO6x2llnRI1+gxwIyPqCKAn3THIKk\u003d",
       "role": "SUPER_ADMIN",
-      "lastLogin": "2025-12-03T00:02:27.2820688",
+      "lastLogin": "2025-12-03T01:06:23.0417441",
       "failedLoginAttempts": 0,
       "accountStatus": "ACTIVE",
       "createdDate": "2025-12-02T21:50:19.3207691",
@@ -60,7 +71,7 @@
       "username": "csharpe",
       "passwordHash": "75K3eLr+dx6JJFuJ7LwIpEpOFmwGZZkRiB84PURz6U8\u003d",
       "role": "VOLUNTEER",
-      "lastLogin": "2025-12-03T00:12:07.5019647",
+      "lastLogin": "2025-12-03T01:05:20.126121",
       "failedLoginAttempts": 0,
       "accountStatus": "ACTIVE",
       "createdDate": "2025-12-02T23:43:47.4293635",

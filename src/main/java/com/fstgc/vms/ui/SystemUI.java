@@ -1019,6 +1019,7 @@ public class SystemUI extends JFrame {
         
         List<com.fstgc.vms.model.Event> upcomingEvents = allEvents.stream()
             .filter(e -> !e.getEventDate().isBefore(today))
+            .filter(e -> e.getStatus() != EventStatus.COMPLETED && e.getStatus() != EventStatus.CANCELLED)
             .sorted((e1, e2) -> e1.getEventDate().compareTo(e2.getEventDate()))
             .toList();
             
@@ -1165,6 +1166,15 @@ public class SystemUI extends JFrame {
             editBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
             editBtn.addActionListener(e -> showEditEventDialog(event.getEventId()));
             
+            JButton statusBtn = new JButton("Status");
+            statusBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            statusBtn.setForeground(PURPLE);
+            statusBtn.setBackground(Color.WHITE);
+            statusBtn.setBorder(BorderFactory.createLineBorder(PURPLE, 1));
+            statusBtn.setFocusPainted(false);
+            statusBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            statusBtn.addActionListener(e -> showChangeEventStatusDialog(event.getEventId()));
+            
             JButton deleteBtn = new JButton("Delete");
             deleteBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
             deleteBtn.setForeground(new Color(239, 68, 68));
@@ -1184,6 +1194,7 @@ public class SystemUI extends JFrame {
             });
             
             buttonPanel.add(editBtn);
+            buttonPanel.add(statusBtn);
             buttonPanel.add(deleteBtn);
             
             card.add(buttonPanel, BorderLayout.SOUTH);
@@ -1330,6 +1341,82 @@ public class SystemUI extends JFrame {
                 eventController.update(event);
                 JOptionPane.showMessageDialog(dialog, 
                     "Event updated successfully!",
+                    "Success", JOptionPane.INFORMATION_MESSAGE);
+                dialog.dispose();
+                refreshAllPanels();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(dialog, 
+                    "Error: " + ex.getMessage(), 
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        
+        buttonPanel.add(cancelBtn);
+        buttonPanel.add(saveBtn);
+        
+        mainPanel.add(formPanel, BorderLayout.CENTER);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        dialog.add(mainPanel);
+        dialog.setVisible(true);
+    }
+    
+    private void showChangeEventStatusDialog(int eventId) {
+        Event event = eventController.get(eventId);
+        if (event == null) {
+            JOptionPane.showMessageDialog(this, "Event not found!", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
+        JDialog dialog = new JDialog(this, "Change Event Status", true);
+        dialog.setSize(400, 250);
+        dialog.setLocationRelativeTo(this);
+        
+        JPanel mainPanel = new JPanel(new BorderLayout(15, 15));
+        mainPanel.setBackground(CARD_BG);
+        mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        
+        JPanel formPanel = new JPanel(new GridLayout(3, 1, 10, 15));
+        formPanel.setBackground(CARD_BG);
+        
+        JLabel eventLabel = new JLabel("Event: " + event.getTitle());
+        eventLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        eventLabel.setForeground(TEXT_PRIMARY);
+        
+        JLabel currentStatusLabel = new JLabel("Current Status: " + event.getStatus());
+        currentStatusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        currentStatusLabel.setForeground(TEXT_SECONDARY);
+        
+        JPanel statusPanel = new JPanel(new BorderLayout(5, 5));
+        statusPanel.setBackground(CARD_BG);
+        statusPanel.add(createLabel("New Status:"), BorderLayout.NORTH);
+        
+        JComboBox<EventStatus> statusCombo = new JComboBox<>(EventStatus.values());
+        statusCombo.setSelectedItem(event.getStatus());
+        statusCombo.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        statusPanel.add(statusCombo, BorderLayout.CENTER);
+        
+        formPanel.add(eventLabel);
+        formPanel.add(currentStatusLabel);
+        formPanel.add(statusPanel);
+        
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        buttonPanel.setBackground(CARD_BG);
+        
+        JButton cancelBtn = createModernButton("Cancel", TEXT_SECONDARY);
+        cancelBtn.addActionListener(e -> dialog.dispose());
+        
+        JButton saveBtn = createModernButton("Update Status", PURPLE);
+        saveBtn.addActionListener(e -> {
+            try {
+                EventStatus newStatus = (EventStatus) statusCombo.getSelectedItem();
+                event.setStatus(newStatus);
+                event.setLastModifiedBy(authService.getCurrentUser().getUsername());
+                event.setLastModifiedDate(LocalDateTime.now());
+                
+                eventController.update(event);
+                JOptionPane.showMessageDialog(dialog, 
+                    "Event status updated to " + newStatus + "!",
                     "Success", JOptionPane.INFORMATION_MESSAGE);
                 dialog.dispose();
                 refreshAllPanels();
