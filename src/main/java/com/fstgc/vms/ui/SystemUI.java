@@ -21,6 +21,7 @@ import java.awt.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 public class SystemUI extends JFrame {
@@ -2086,13 +2087,18 @@ public class SystemUI extends JFrame {
         JButton recordBtn = createModernButton("Record Attendance", GREEN);
         recordBtn.addActionListener(e -> {
             try {
+                int volId = Integer.parseInt(volunteerIdField.getText());
                 Attendance a = attendanceController.recordAttendance(
-                    Integer.parseInt(volunteerIdField.getText()),
+                    volId,
                     Integer.parseInt(eventIdField.getText()),
                     Double.parseDouble(hoursField.getText())
                 );
                 JOptionPane.showMessageDialog(dialog, "Attendance recorded! Hours: " + a.getHoursWorked());
                 dialog.dispose();
+                
+                // Check and award badges based on new total hours
+                checkAndAwardBadges(volId);
+                
                 refreshAllPanels();
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(dialog, "Error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
@@ -3239,6 +3245,103 @@ public class SystemUI extends JFrame {
         
         dialog.add(mainPanel);
         dialog.setVisible(true);
+    }
+
+    private void checkAndAwardBadges(int volunteerId) {
+        double totalHours = calculateTotalHours(volunteerId);
+        int eventsAttended = calculateEventsAttended(volunteerId);
+        
+        List<String> newBadges = new ArrayList<>();
+        
+        // Hour-based badges
+        if (totalHours >= 10) {
+            com.fstgc.vms.model.Award award = awardBadgeIfNotExists(volunteerId, "First Steps", 
+                "Completed 10 hours of volunteer work",
+                com.fstgc.vms.model.enums.BadgeTier.BRONZE,
+                com.fstgc.vms.model.enums.CriteriaType.HOURS_COMPLETED, 10);
+            if (award != null) newBadges.add("🥉 First Steps (10 hours)");
+        }
+        
+        if (totalHours >= 25) {
+            com.fstgc.vms.model.Award award = awardBadgeIfNotExists(volunteerId, "Dedicated Helper",
+                "Completed 25 hours of volunteer work",
+                com.fstgc.vms.model.enums.BadgeTier.BRONZE,
+                com.fstgc.vms.model.enums.CriteriaType.HOURS_COMPLETED, 25);
+            if (award != null) newBadges.add("🥉 Dedicated Helper (25 hours)");
+        }
+        
+        if (totalHours >= 50) {
+            com.fstgc.vms.model.Award award = awardBadgeIfNotExists(volunteerId, "Community Champion",
+                "Completed 50 hours of volunteer work",
+                com.fstgc.vms.model.enums.BadgeTier.SILVER,
+                com.fstgc.vms.model.enums.CriteriaType.HOURS_COMPLETED, 50);
+            if (award != null) newBadges.add("🥈 Community Champion (50 hours)");
+        }
+        
+        if (totalHours >= 100) {
+            com.fstgc.vms.model.Award award = awardBadgeIfNotExists(volunteerId, "Elite Volunteer",
+                "Completed 100 hours of volunteer work",
+                com.fstgc.vms.model.enums.BadgeTier.GOLD,
+                com.fstgc.vms.model.enums.CriteriaType.HOURS_COMPLETED, 100);
+            if (award != null) newBadges.add("🥇 Elite Volunteer (100 hours)");
+        }
+        
+        // Event attendance badges
+        if (eventsAttended >= 5) {
+            com.fstgc.vms.model.Award award = awardBadgeIfNotExists(volunteerId, "Event Enthusiast",
+                "Attended 5 events",
+                com.fstgc.vms.model.enums.BadgeTier.BRONZE,
+                com.fstgc.vms.model.enums.CriteriaType.EVENTS_ATTENDED, 5);
+            if (award != null) newBadges.add("🥉 Event Enthusiast (5 events)");
+        }
+        
+        if (eventsAttended >= 10) {
+            com.fstgc.vms.model.Award award = awardBadgeIfNotExists(volunteerId, "Regular Attendee",
+                "Attended 10 events",
+                com.fstgc.vms.model.enums.BadgeTier.SILVER,
+                com.fstgc.vms.model.enums.CriteriaType.EVENTS_ATTENDED, 10);
+            if (award != null) newBadges.add("🥈 Regular Attendee (10 events)");
+        }
+        
+        if (eventsAttended >= 20) {
+            com.fstgc.vms.model.Award award = awardBadgeIfNotExists(volunteerId, "Event Master",
+                "Attended 20 events",
+                com.fstgc.vms.model.enums.BadgeTier.GOLD,
+                com.fstgc.vms.model.enums.CriteriaType.EVENTS_ATTENDED, 20);
+            if (award != null) newBadges.add("🥇 Event Master (20 events)");
+        }
+        
+        // Show notification if new badges were earned
+        if (!newBadges.isEmpty()) {
+            StringBuilder message = new StringBuilder("🎉 Congratulations! New badge(s) earned:\n\n");
+            for (String badge : newBadges) {
+                message.append(badge).append("\n");
+            }
+            message.append("\nTotal Hours: ").append(String.format("%.1f", totalHours));
+            message.append("\nEvents Attended: ").append(eventsAttended);
+            
+            JOptionPane.showMessageDialog(this,
+                message.toString(),
+                "New Badge(s) Earned!",
+                JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+    
+    private com.fstgc.vms.model.Award awardBadgeIfNotExists(int volunteerId, String badgeName, String description,
+                                com.fstgc.vms.model.enums.BadgeTier tier,
+                                com.fstgc.vms.model.enums.CriteriaType criteriaType,
+                                int threshold) {
+        // Create criteria for this badge
+        com.fstgc.vms.model.AwardCriteria criteria = new com.fstgc.vms.model.AwardCriteria();
+        criteria.setCriteriaId(badgeName.hashCode()); // Use badge name hash as unique ID
+        criteria.setBadgeName(badgeName);
+        criteria.setDescription(description);
+        criteria.setBadgeTier(tier);
+        criteria.setCriteriaType(criteriaType);
+        criteria.setThresholdValue(threshold);
+        
+        // Try to award the badge (will return null if already awarded)
+        return awardController.assign(volunteerId, criteria);
     }
 
     public void launch() {
