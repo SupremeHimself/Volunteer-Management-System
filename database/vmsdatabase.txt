@@ -12,6 +12,50 @@
       "lastName": "Sharpe",
       "email": "carl.sharpe@test.com",
       "phone": "18761234567"
+    },
+    "3": {
+      "registrationDate": "2025-12-03T16:43:56.0521956",
+      "status": "ACTIVE",
+      "eventsAttended": 0,
+      "badgesEarned": 0,
+      "id": 3,
+      "firstName": "Sally",
+      "lastName": "Shore",
+      "email": "ss@gmail.com",
+      "phone": "87612345678"
+    },
+    "4": {
+      "registrationDate": "2025-12-03T16:47:14.2828363",
+      "status": "ACTIVE",
+      "eventsAttended": 0,
+      "badgesEarned": 0,
+      "id": 4,
+      "firstName": "Michael",
+      "lastName": "Jackson",
+      "email": "mj@gmail.com",
+      "phone": "8761234567"
+    },
+    "5": {
+      "registrationDate": "2025-12-03T16:48:04.8466582",
+      "status": "ACTIVE",
+      "eventsAttended": 0,
+      "badgesEarned": 0,
+      "id": 5,
+      "firstName": "Rick",
+      "lastName": "Owens",
+      "email": "manlikerick@gmail.com",
+      "phone": "8769999999"
+    },
+    "6": {
+      "registrationDate": "2025-12-03T16:49:12.2744114",
+      "status": "ACTIVE",
+      "eventsAttended": 0,
+      "badgesEarned": 0,
+      "id": 6,
+      "firstName": "Adrian",
+      "lastName": "Meeks",
+      "email": "admek@gmail.com",
+      "phone": "8769999999"
     }
   },
   "events": {
@@ -20,8 +64,8 @@
       "title": "Christmas Day Outreach Programme",
       "eventDate": "2025-12-25",
       "location": "UWI Mona",
-      "capacity": 99,
-      "currentRegistrations": 1,
+      "capacity": 98,
+      "currentRegistrations": 2,
       "eventType": "COMMUNITY_SERVICE",
       "status": "PUBLISHED",
       "createdByAdminId": 0,
@@ -33,8 +77,8 @@
       "title": "Coastal Clean-Up",
       "eventDate": "2025-12-28",
       "location": "Hellshire Beach",
-      "capacity": 249,
-      "currentRegistrations": 1,
+      "capacity": 248,
+      "currentRegistrations": 2,
       "eventType": "COMMUNITY_SERVICE",
       "status": "PUBLISHED",
       "createdByAdminId": 0,
@@ -62,9 +106,28 @@
       "eventId": 2,
       "checkInTime": "2025-12-03T15:39:55.1188831",
       "status": "PRESENT",
-      "hoursWorked": 7.5,
-      "lastModifiedBy": "csharpe",
-      "lastModifiedDate": "2025-12-03T15:40:26.4934953"
+      "hoursWorked": 10.0,
+      "lastModifiedBy": "johnjack",
+      "lastModifiedDate": "2025-12-03T16:21:58.3942439"
+    },
+    "2": {
+      "attendanceId": 2,
+      "volunteerId": 3,
+      "eventId": 1,
+      "checkInTime": "2025-12-03T16:21:04.335365",
+      "status": "PRESENT",
+      "hoursWorked": 0.0,
+      "lastModifiedBy": "admin",
+      "lastModifiedDate": "2025-12-03T16:25:42.6902443"
+    },
+    "3": {
+      "attendanceId": 3,
+      "volunteerId": 3,
+      "eventId": 2,
+      "checkInTime": "2025-12-03T16:21:44.1357928",
+      "hoursWorked": 0.0,
+      "lastModifiedBy": "admin",
+      "lastModifiedDate": "2025-12-03T16:25:45.6279744"
     }
   },
   "announcements": {},
@@ -88,6 +151,28 @@
       "totalHours": 0.0,
       "approvalStatus": "APPROVED",
       "createdDate": "2025-12-03T15:42:01.6229933"
+    },
+    "3": {
+      "timesheetId": 3,
+      "volunteerId": 3,
+      "eventId": 1,
+      "eventName": "Christmas Day Outreach Programme",
+      "periodStartDate": "2025-12-25",
+      "periodEndDate": "2025-12-25",
+      "totalHours": 0.0,
+      "approvalStatus": "PENDING",
+      "createdDate": "2025-12-03T16:21:04.3373709"
+    },
+    "4": {
+      "timesheetId": 4,
+      "volunteerId": 3,
+      "eventId": 2,
+      "eventName": "Coastal Clean-Up",
+      "periodStartDate": "2025-12-28",
+      "periodEndDate": "2025-12-28",
+      "totalHours": 0.0,
+      "approvalStatus": "PENDING",
+      "createdDate": "2025-12-03T16:21:44.1377944"
     }
   },
   "admins": {
@@ -95,7 +180,7 @@
       "username": "admin",
       "passwordHash": "JAvlGPq9JyTdtvBO6x2llnRI1+gxwIyPqCKAn3THIKk\u003d",
       "role": "SUPER_ADMIN",
-      "lastLogin": "2025-12-03T15:55:45.5886158",
+      "lastLogin": "2025-12-03T16:50:22.0994406",
       "failedLoginAttempts": 0,
       "accountStatus": "ACTIVE",
       "createdDate": "2025-12-02T21:50:19.3207691",
@@ -118,6 +203,76 @@
       "lastName": "Sharpe",
       "email": "carl.sharpe@test.com",
       "phone": "18761234567"
+    },
+    "3": {
+      "username": "johnjack",
+      "passwordHash": "XohImNooBHFR0OVvjcYpJ3NgPQ1qq73WKhHvch0VQtg\u003d",
+      "role": "VOLUNTEER",
+      "lastLogin": "2025-12-03T16:22:58.3188327",
+      "failedLoginAttempts": 0,
+      "accountStatus": "ACTIVE",
+      "createdDate": "2025-12-03T16:20:50.8469496",
+      "id": 3,
+      "firstName": "Johnathan",
+      "lastName": "Jackson",
+      "email": "johnjack@gmail.com",
+      "phone": "8765637363"
+    },
+    "4": {
+      "username": "sally",
+      "passwordHash": "XohImNooBHFR0OVvjcYpJ3NgPQ1qq73WKhHvch0VQtg\u003d",
+      "role": "VOLUNTEER",
+      "lastLogin": "2025-12-03T16:44:49.9604953",
+      "failedLoginAttempts": 0,
+      "accountStatus": "ACTIVE",
+      "createdDate": "2025-12-03T16:43:56.0273486",
+      "id": 4,
+      "firstName": "Sally",
+      "lastName": "Shore",
+      "email": "ss@gmail.com",
+      "phone": "87612345678"
+    },
+    "5": {
+      "username": "michael",
+      "passwordHash": "XohImNooBHFR0OVvjcYpJ3NgPQ1qq73WKhHvch0VQtg\u003d",
+      "role": "VOLUNTEER",
+      "lastLogin": "2025-12-03T16:47:18.112821",
+      "failedLoginAttempts": 0,
+      "accountStatus": "ACTIVE",
+      "createdDate": "2025-12-03T16:47:14.2591637",
+      "id": 5,
+      "firstName": "Michael",
+      "lastName": "Jackson",
+      "email": "mj@gmail.com",
+      "phone": "8761234567"
+    },
+    "6": {
+      "username": "manlikerick",
+      "passwordHash": "XohImNooBHFR0OVvjcYpJ3NgPQ1qq73WKhHvch0VQtg\u003d",
+      "role": "VOLUNTEER",
+      "lastLogin": "2025-12-03T16:48:08.274469",
+      "failedLoginAttempts": 0,
+      "accountStatus": "ACTIVE",
+      "createdDate": "2025-12-03T16:48:04.8241309",
+      "id": 6,
+      "firstName": "Rick",
+      "lastName": "Owens",
+      "email": "manlikerick@gmail.com",
+      "phone": "8769999999"
+    },
+    "7": {
+      "username": "whoopty",
+      "passwordHash": "XohImNooBHFR0OVvjcYpJ3NgPQ1qq73WKhHvch0VQtg\u003d",
+      "role": "VOLUNTEER",
+      "lastLogin": "2025-12-03T16:49:17.3305817",
+      "failedLoginAttempts": 0,
+      "accountStatus": "ACTIVE",
+      "createdDate": "2025-12-03T16:49:12.2480772",
+      "id": 7,
+      "firstName": "Adrian",
+      "lastName": "Meeks",
+      "email": "admek@gmail.com",
+      "phone": "8769999999"
     }
   }
 }
