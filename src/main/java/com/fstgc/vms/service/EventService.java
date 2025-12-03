@@ -16,6 +16,19 @@ public class EventService {
         return repository.save(e);
     }
     
+    public Event get(int eventId) {
+        return repository.findById(eventId).orElse(null);
+    }
+    
+    public void update(Event event) {
+        if (event.getCapacity() < 0) throw new IllegalArgumentException("Capacity must be >= 0");
+        repository.update(event);
+    }
+    
+    public boolean delete(int eventId) {
+        return repository.delete(eventId);
+    }
+    
     public List<Event> listAll() { return repository.findAll(); }
 
     public Event publish(int eventId) {

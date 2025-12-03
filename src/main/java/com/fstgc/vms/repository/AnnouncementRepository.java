@@ -15,4 +15,5 @@ public interface AnnouncementRepository {
     Announcement save(Announcement announcement);
     Announcement update(Announcement announcement);
     boolean softDelete(int id);
+    boolean delete(int id);
 }

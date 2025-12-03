@@ -16,5 +16,17 @@ public class AnnouncementController {
         return service.publish(a);
     }
     
+    public Announcement get(int announcementId) {
+        return service.get(announcementId);
+    }
+    
+    public void update(Announcement announcement) {
+        service.update(announcement);
+    }
+    
+    public boolean delete(int announcementId) {
+        return service.delete(announcementId);
+    }
+    
     public java.util.List<Announcement> listAll() { return service.listAll(); }
 }

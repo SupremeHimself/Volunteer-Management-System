@@ -52,6 +52,11 @@ public class InMemoryTimesheetRepository implements TimesheetRepository {
     }
 
     @Override
+    public List<Timesheet> findAll() {
+        return new ArrayList<>(store.values());
+    }
+
+    @Override
     public Timesheet save(Timesheet timesheet) {
         int id = seq.getAndIncrement();
         timesheet.setTimesheetId(id);

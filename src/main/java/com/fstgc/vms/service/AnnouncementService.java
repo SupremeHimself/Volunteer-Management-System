@@ -7,18 +7,26 @@ import java.util.List;
 
 public class AnnouncementService {
     private final AnnouncementRepository repository;
-    private final NotificationService notifier;
 
-    public AnnouncementService(AnnouncementRepository repository, NotificationService notifier) {
+    public AnnouncementService(AnnouncementRepository repository) {
         this.repository = repository;
-        this.notifier = notifier;
     }
 
     public Announcement publish(Announcement a) {
         a.setPublishedDate(LocalDateTime.now());
-        Announcement saved = repository.save(a);
-        notifier.sendInApp(0, "New announcement: " + a.getTitle());
-        return saved;
+        return repository.save(a);
+    }
+    
+    public Announcement get(int announcementId) {
+        return repository.findById(announcementId).orElse(null);
+    }
+    
+    public void update(Announcement announcement) {
+        repository.update(announcement);
+    }
+    
+    public boolean delete(int announcementId) {
+        return repository.delete(announcementId);
     }
 
     public List<Announcement> active() { return repository.findActive(); }

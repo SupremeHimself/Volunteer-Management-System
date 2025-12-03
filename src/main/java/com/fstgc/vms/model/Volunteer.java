@@ -12,6 +12,9 @@ public class Volunteer extends Person {
     private String address;
     // Number of events this volunteer has attended; new volunteers start at 0
     private int eventsAttended = 0;
+    private String lastModifiedBy;
+    private LocalDateTime lastModifiedDate;
+    private int badgesEarned = 0;
 
     public LocalDateTime getRegistrationDate() { return registrationDate; }
     public void setRegistrationDate(LocalDateTime registrationDate) { this.registrationDate = registrationDate; }
@@ -26,6 +29,13 @@ public class Volunteer extends Person {
 
     public int getEventsAttended() { return eventsAttended; }
     public void setEventsAttended(int eventsAttended) { this.eventsAttended = eventsAttended; }
+
+    public String getLastModifiedBy() { return lastModifiedBy; }
+    public void setLastModifiedBy(String lastModifiedBy) { this.lastModifiedBy = lastModifiedBy; }
+    public LocalDateTime getLastModifiedDate() { return lastModifiedDate; }
+    public void setLastModifiedDate(LocalDateTime lastModifiedDate) { this.lastModifiedDate = lastModifiedDate; }
+    public int getBadgesEarned() { return badgesEarned; }
+    public void setBadgesEarned(int badgesEarned) { this.badgesEarned = badgesEarned; }
     
     // Placeholder for total hours calculation - in production this would aggregate from attendance records
     public double getTotalHoursWorked() {

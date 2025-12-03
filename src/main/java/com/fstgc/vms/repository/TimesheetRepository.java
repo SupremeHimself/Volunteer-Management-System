@@ -11,6 +11,7 @@ public interface TimesheetRepository {
     List<Timesheet> findByPeriod(LocalDate start, LocalDate end);
     List<Timesheet> findByApprovalStatus(String status);
     List<Timesheet> findPendingApprovals();
+    List<Timesheet> findAll();
     Timesheet save(Timesheet timesheet);
     Timesheet update(Timesheet timesheet);
     boolean delete(int id);

@@ -17,6 +17,8 @@ public class Announcement implements Serializable {
     private Integer eventId; // nullable
     private int createdByAdminId;
     private boolean deleted = false;
+    private String lastModifiedBy;
+    private LocalDateTime lastModifiedDate;
 
     public int getAnnouncementId() { return announcementId; }
     public void setAnnouncementId(int announcementId) { this.announcementId = announcementId; }
@@ -38,4 +40,8 @@ public class Announcement implements Serializable {
     public void setCreatedByAdminId(int createdByAdminId) { this.createdByAdminId = createdByAdminId; }
     public boolean isDeleted() { return deleted; }
     public void setDeleted(boolean deleted) { this.deleted = deleted; }
+    public String getLastModifiedBy() { return lastModifiedBy; }
+    public void setLastModifiedBy(String lastModifiedBy) { this.lastModifiedBy = lastModifiedBy; }
+    public LocalDateTime getLastModifiedDate() { return lastModifiedDate; }
+    public void setLastModifiedDate(LocalDateTime lastModifiedDate) { this.lastModifiedDate = lastModifiedDate; }
 }

@@ -26,9 +26,10 @@ public class AuthenticationService {
     }
 
     private void initializeDefaultAdmin() {
-        Optional<SystemAdmin> existing = adminRepository.findByUsername("admin@vms.com");
+        Optional<SystemAdmin> existing = adminRepository.findByUsername("admin");
         if (existing.isEmpty()) {
             SystemAdmin admin = new SystemAdmin();
+            admin.setUsername("admin");
             admin.setFirstName("System");
             admin.setLastName("Administrator");
             admin.setEmail("admin@vms.com");
@@ -98,15 +99,17 @@ public class AuthenticationService {
         return currentUser != null ? currentUser.getRole() : null;
     }
 
-    public boolean register(String firstName, String lastName, String email, String phone, String password) {
-        // Check if email already exists
-        Optional<SystemAdmin> existing = adminRepository.findByUsername(email);
-        if (existing.isPresent()) {
+    public boolean register(String username, String firstName, String lastName, String email, String phone, String password) {
+        // Check if username or email already exists
+        Optional<SystemAdmin> existingUsername = adminRepository.findByUsername(username);
+        Optional<SystemAdmin> existingEmail = adminRepository.findByUsername(email);
+        if (existingUsername.isPresent() || existingEmail.isPresent()) {
             return false;
         }
 
         // Create new admin account used for authentication
         SystemAdmin admin = new SystemAdmin();
+        admin.setUsername(username);
         admin.setFirstName(firstName);
         admin.setLastName(lastName);
         admin.setEmail(email);

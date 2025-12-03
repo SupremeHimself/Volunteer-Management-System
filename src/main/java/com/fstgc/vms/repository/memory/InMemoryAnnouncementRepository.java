@@ -75,6 +75,16 @@ public class InMemoryAnnouncementRepository implements AnnouncementRepository {
         if (a == null) return false;
         a.setDeleted(true);
         store.put(id, a);
+        DataPersistence.saveAnnouncements(store);
         return true;
+    }
+    
+    @Override
+    public boolean delete(int id) {
+        boolean removed = store.remove(id) != null;
+        if (removed) {
+            DataPersistence.saveAnnouncements(store);
+        }
+        return removed;
     }
 }

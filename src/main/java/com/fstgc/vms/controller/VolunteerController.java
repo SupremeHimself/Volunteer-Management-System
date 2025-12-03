@@ -21,13 +21,25 @@ public class VolunteerController {
         return service.register(v);
     }
 
+    // Convenience overload in case a fully-built Volunteer is provided
+    public Volunteer register(Volunteer v) {
+        return service.register(v);
+    }
+
+    public Optional<Volunteer> get(int id) { return service.get(id); }
+
+    public Volunteer update(Volunteer v) { return service.update(v); }
+
     public List<Volunteer> list() { return service.list(); }
 
     public List<Volunteer> listAll() { return service.list(); }
 
-    public Optional<Volunteer> get(int id) { return service.get(id); }
-
-    public Volunteer updateVolunteer(int id, String firstName, String lastName, String email, String phone, VolunteerStatus status) {
+    public Volunteer updateVolunteer(int id,
+                                     String firstName,
+                                     String lastName,
+                                     String email,
+                                     String phone,
+                                     VolunteerStatus status) {
         Volunteer existing = service.get(id)
             .orElseThrow(() -> new IllegalArgumentException("Volunteer not found: " + id));
         existing.setFirstName(firstName);
@@ -40,9 +52,9 @@ public class VolunteerController {
         return service.update(existing);
     }
 
-    public boolean delete(int id) { return service.delete(id); }
+    public void delete(int id) { service.delete(id); }
 
     public Optional<Volunteer> changeStatus(int id, VolunteerStatus status) {
-        return service.changeStatus(id, status);
+        return service.get(id);
     }
 }

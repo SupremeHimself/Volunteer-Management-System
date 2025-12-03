@@ -60,4 +60,12 @@ public class TimesheetService {
         t.setApprovalDate(LocalDateTime.now());
         return timesheets.update(t);
     }
+    
+    public void update(Timesheet timesheet) {
+        timesheets.update(timesheet);
+    }
+    
+    public List<Timesheet> listAll() {
+        return timesheets.findAll();
+    }
 }

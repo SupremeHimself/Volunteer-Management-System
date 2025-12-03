@@ -24,7 +24,8 @@ public class AttendanceService {
         if (a.getCheckInTime()!=null && time.isBefore(a.getCheckInTime())) throw new IllegalArgumentException("Checkout before checkin");
         a.setCheckOutTime(time);
         double hours = Duration.between(a.getCheckInTime(), time).toMinutes()/60.0;
-        a.setHoursWorked(Math.max(0, Math.round(hours*100.0)/100.0));
+        // Round up to the nearest hour
+        a.setHoursWorked(Math.max(0, Math.ceil(hours)));
         return repository.update(a);
     }
 

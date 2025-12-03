@@ -5,6 +5,7 @@ import com.fstgc.vms.model.enums.Role;
 import java.time.LocalDateTime;
 
 public class SystemAdmin extends Person {
+    private String username;
     private String passwordHash;
     private Role role = Role.COORDINATOR;
     private String permissionsJson;
@@ -15,6 +16,8 @@ public class SystemAdmin extends Person {
     private LocalDateTime createdDate = LocalDateTime.now();
     private Integer createdByAdminId;
 
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
     public String getPasswordHash() { return passwordHash; }
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
     public Role getRole() { return role; }
