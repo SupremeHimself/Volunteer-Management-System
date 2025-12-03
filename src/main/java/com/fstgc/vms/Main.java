@@ -1,0 +1,39 @@
+package com.fstgc.vms;
+
+import com.fstgc.vms.repository.memory.InMemoryAdminRepository;
+import com.fstgc.vms.service.AuthenticationService;
+import com.fstgc.vms.ui.LoginDialog;
+import com.fstgc.vms.ui.SystemTXT;
+import com.fstgc.vms.ui.SystemUI;
+import com.fstgc.vms.util.DataPersistence;
+
+import javax.swing.*;
+
+public class Main {
+    public static void main(String[] args) {
+        // Initialize data persistence
+        DataPersistence.initialize();
+        
+        // Create authentication service
+        AuthenticationService authService = new AuthenticationService(new InMemoryAdminRepository());
+        
+        // Launch GUI if no arguments, console if --console flag is present
+        if (args.length > 0 && args[0].equals("--console")) {
+            SystemTXT app = new SystemTXT();
+            app.run();
+        } else {
+            // Show login dialog
+            SwingUtilities.invokeLater(() -> {
+                LoginDialog loginDialog = new LoginDialog(null, authService);
+                loginDialog.setVisible(true);
+                
+                if (loginDialog.isAuthenticated()) {
+                    SystemUI gui = new SystemUI(authService);
+                    gui.launch();
+                } else {
+                    System.exit(0);
+                }
+            });
+        }
+    }
+}

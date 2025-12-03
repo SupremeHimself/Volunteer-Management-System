@@ -1,0 +1,31 @@
+package com.fstgc.vms.model;
+
+import com.fstgc.vms.model.enums.VolunteerStatus;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+public class Volunteer extends Person {
+    private LocalDateTime registrationDate = LocalDateTime.now();
+    private VolunteerStatus status = VolunteerStatus.ACTIVE;
+    private String profilePhotoUrl;
+    private LocalDate dateOfBirth;
+    private String address;
+
+    public LocalDateTime getRegistrationDate() { return registrationDate; }
+    public void setRegistrationDate(LocalDateTime registrationDate) { this.registrationDate = registrationDate; }
+    public VolunteerStatus getStatus() { return status; }
+    public void setStatus(VolunteerStatus status) { this.status = status; }
+    public String getProfilePhotoUrl() { return profilePhotoUrl; }
+    public void setProfilePhotoUrl(String profilePhotoUrl) { this.profilePhotoUrl = profilePhotoUrl; }
+    public LocalDate getDateOfBirth() { return dateOfBirth; }
+    public void setDateOfBirth(LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }
+    public String getAddress() { return address; }
+    public void setAddress(String address) { this.address = address; }
+    
+    // Placeholder for total hours calculation - in production this would aggregate from attendance records
+    public double getTotalHoursWorked() {
+        // This is a placeholder. In a real system, this would query attendance records
+        // For now, return 0 hours for all volunteers initially
+        return 0.0;
+    }
+}
