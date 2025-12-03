@@ -81,14 +81,13 @@ public class SystemTXT {
     private void checkIn() {
         System.out.print("Volunteer ID: "); int vid = Integer.parseInt(scanner.nextLine());
         System.out.print("Event ID: "); int eid = Integer.parseInt(scanner.nextLine());
-        Attendance a = attendanceController.checkIn(vid, eid);
-        System.out.println("Attendance #" + a.getAttendanceId() + " checked-in.");
+        System.out.print("Hours Worked: "); double hours = Double.parseDouble(scanner.nextLine());
+        Attendance a = attendanceController.recordAttendance(vid, eid, hours);
+        System.out.println("Attendance #" + a.getAttendanceId() + " recorded. Hours: " + a.getHoursWorked());
     }
 
     private void checkOut() {
-        System.out.print("Attendance ID: "); int aid = Integer.parseInt(scanner.nextLine());
-        Attendance a = attendanceController.checkOut(aid);
-        System.out.println("Checked-out. Hours worked: " + a.getHoursWorked());
+        System.out.println("Check-out is no longer needed. Please record attendance with hours directly.");
     }
 
     private void generateTimesheet() {

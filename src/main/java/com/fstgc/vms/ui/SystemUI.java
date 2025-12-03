@@ -271,8 +271,15 @@ public class SystemUI extends JFrame {
             badgesLabel = "My Badges";
         }
         
+        // Count only upcoming events (date >= today and not completed/cancelled)
+        LocalDate today = LocalDate.now();
+        long upcomingEventsCount = events.stream()
+            .filter(e -> !e.getEventDate().isBefore(today))
+            .filter(e -> e.getStatus() != EventStatus.COMPLETED && e.getStatus() != EventStatus.CANCELLED)
+            .count();
+        
         statsPanel.add(createStatCard("Active Volunteers", String.valueOf(volunteers.size()), PRIMARY_BLUE, "👥", 1));
-        statsPanel.add(createStatCard("Upcoming Events", String.valueOf(events.size()), GREEN, "📅", 2));
+        statsPanel.add(createStatCard("Upcoming Events", String.valueOf(upcomingEventsCount), GREEN, "📅", 2));
         statsPanel.add(createStatCard(hoursLabel, String.valueOf(displayHours), PURPLE, "⏰", 4));
         statsPanel.add(createStatCard(badgesLabel, String.valueOf(displayBadges), ORANGE, "🏆", 5));
         
@@ -1192,14 +1199,10 @@ public class SystemUI extends JFrame {
             .sorted((e1, e2) -> e1.getEventDate().compareTo(e2.getEventDate()))
             .toList();
             
-        List<com.fstgc.vms.model.Event> pastEvents = allEvents.stream()
-            .filter(e -> e.getEventDate().isBefore(today))
-            .filter(e -> e.getStatus() != EventStatus.COMPLETED && e.getStatus() != EventStatus.CANCELLED)
-            .sorted((e1, e2) -> e2.getEventDate().compareTo(e1.getEventDate())) // Most recent first
-            .toList();
-            
-        List<com.fstgc.vms.model.Event> completedEvents = allEvents.stream()
-            .filter(e -> e.getStatus() == EventStatus.COMPLETED)
+        // Combine past and completed events into one list
+        List<com.fstgc.vms.model.Event> pastAndCompletedEvents = allEvents.stream()
+            .filter(e -> e.getEventDate().isBefore(today) || e.getStatus() == EventStatus.COMPLETED)
+            .filter(e -> e.getStatus() != EventStatus.CANCELLED)
             .sorted((e1, e2) -> e2.getEventDate().compareTo(e1.getEventDate())) // Most recent first
             .toList();
             
@@ -1208,8 +1211,8 @@ public class SystemUI extends JFrame {
             .sorted((e1, e2) -> e2.getEventDate().compareTo(e1.getEventDate())) // Most recent first
             .toList();
         
-        // Create horizontal layout with 4 columns (one for each section)
-        JPanel horizontalSections = new JPanel(new GridLayout(1, 4, 15, 0));
+        // Create horizontal layout with 3 columns (Upcoming, Past/Completed, Cancelled)
+        JPanel horizontalSections = new JPanel(new GridLayout(1, 3, 15, 0));
         horizontalSections.setBackground(GRAY_BG);
         horizontalSections.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         
@@ -1245,68 +1248,36 @@ public class SystemUI extends JFrame {
             upcomingSection.add(upcomingScroll);
         }
         
-        // Past Events Section
-        JPanel pastSection = new JPanel();
-        pastSection.setLayout(new BoxLayout(pastSection, BoxLayout.Y_AXIS));
-        pastSection.setBackground(GRAY_BG);
+        // Past & Completed Events Section (combined)
+        JPanel pastCompletedSection = new JPanel();
+        pastCompletedSection.setLayout(new BoxLayout(pastCompletedSection, BoxLayout.Y_AXIS));
+        pastCompletedSection.setBackground(GRAY_BG);
         
-        JLabel pastLabel = new JLabel("📚 Past");
-        pastLabel.setFont(getEmojiFont(14).deriveFont(Font.BOLD));
-        pastLabel.setForeground(TEXT_PRIMARY);
-        pastLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        pastLabel.setBorder(new EmptyBorder(0, 0, 10, 0));
-        pastSection.add(pastLabel);
+        JLabel pastCompletedLabel = new JLabel("📚 Past & Completed");
+        pastCompletedLabel.setFont(getEmojiFont(14).deriveFont(Font.BOLD));
+        pastCompletedLabel.setForeground(TEXT_PRIMARY);
+        pastCompletedLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        pastCompletedLabel.setBorder(new EmptyBorder(0, 0, 10, 0));
+        pastCompletedSection.add(pastCompletedLabel);
         
-        if (pastEvents.isEmpty()) {
-            JLabel noPastLabel = new JLabel("No past events");
-            noPastLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
-            noPastLabel.setForeground(TEXT_SECONDARY);
-            noPastLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            pastSection.add(noPastLabel);
+        if (pastAndCompletedEvents.isEmpty()) {
+            JLabel noPastCompletedLabel = new JLabel("No past or completed events");
+            noPastCompletedLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+            noPastCompletedLabel.setForeground(TEXT_SECONDARY);
+            noPastCompletedLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            pastCompletedSection.add(noPastCompletedLabel);
         } else {
-            JPanel pastGrid = new JPanel(new GridLayout(0, 1, 0, 15));
-            pastGrid.setBackground(GRAY_BG);
-            pastGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
-            for (com.fstgc.vms.model.Event event : pastEvents) {
-                pastGrid.add(createEventCard(event));
+            JPanel pastCompletedGrid = new JPanel(new GridLayout(0, 1, 0, 15));
+            pastCompletedGrid.setBackground(GRAY_BG);
+            pastCompletedGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
+            for (com.fstgc.vms.model.Event event : pastAndCompletedEvents) {
+                pastCompletedGrid.add(createEventCard(event));
             }
-            JScrollPane pastScroll = new JScrollPane(pastGrid);
-            pastScroll.setBorder(null);
-            pastScroll.setBackground(GRAY_BG);
-            pastScroll.getVerticalScrollBar().setUnitIncrement(16);
-            pastSection.add(pastScroll);
-        }
-        
-        // Completed Events Section
-        JPanel completedSection = new JPanel();
-        completedSection.setLayout(new BoxLayout(completedSection, BoxLayout.Y_AXIS));
-        completedSection.setBackground(GRAY_BG);
-        
-        JLabel completedLabel = new JLabel("✅ Completed");
-        completedLabel.setFont(getEmojiFont(12).deriveFont(Font.BOLD));
-        completedLabel.setForeground(GREEN);
-        completedLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        completedLabel.setBorder(new EmptyBorder(0, 0, 10, 0));
-        completedSection.add(completedLabel);
-        
-        if (completedEvents.isEmpty()) {
-            JLabel noCompletedLabel = new JLabel("No completed events");
-            noCompletedLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
-            noCompletedLabel.setForeground(TEXT_SECONDARY);
-            noCompletedLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            completedSection.add(noCompletedLabel);
-        } else {
-            JPanel completedGrid = new JPanel(new GridLayout(0, 1, 0, 15));
-            completedGrid.setBackground(GRAY_BG);
-            completedGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
-            for (com.fstgc.vms.model.Event event : completedEvents) {
-                completedGrid.add(createEventCard(event));
-            }
-            JScrollPane completedScroll = new JScrollPane(completedGrid);
-            completedScroll.setBorder(null);
-            completedScroll.setBackground(GRAY_BG);
-            completedScroll.getVerticalScrollBar().setUnitIncrement(16);
-            completedSection.add(completedScroll);
+            JScrollPane pastCompletedScroll = new JScrollPane(pastCompletedGrid);
+            pastCompletedScroll.setBorder(null);
+            pastCompletedScroll.setBackground(GRAY_BG);
+            pastCompletedScroll.getVerticalScrollBar().setUnitIncrement(16);
+            pastCompletedSection.add(pastCompletedScroll);
         }
         
         // Cancelled Events Section
@@ -1343,8 +1314,7 @@ public class SystemUI extends JFrame {
         
         // Add all sections to horizontal layout
         horizontalSections.add(upcomingSection);
-        horizontalSections.add(pastSection);
-        horizontalSections.add(completedSection);
+        horizontalSections.add(pastCompletedSection);
         horizontalSections.add(cancelledSection);
         
         contentPanel.add(horizontalSections);
@@ -1788,7 +1758,8 @@ public class SystemUI extends JFrame {
             
             // Create attendance record to track registration
             // This will also increment registration count and decrease capacity
-            attendanceController.checkIn(currentVol.getId(), eventId);
+            // For event registration, record 0 hours initially - they can update later
+            attendanceController.recordAttendance(currentVol.getId(), eventId, 0.0);
             
             // Refresh event to get updated counts
             event = eventController.get(eventId);
@@ -1851,11 +1822,11 @@ public class SystemUI extends JFrame {
         JPanel tableCard = createModernCard();
         tableCard.setLayout(new BorderLayout());
         
-        String[] columnNames = {"ID", "Volunteer ID", "Event ID", "Check In", "Check Out", "Hours", "Status", "Actions"};
+        String[] columnNames = {"ID", "Volunteer ID", "Event ID", "Hours", "Status", "Actions"};
         DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return column == 7; // Only Actions column is editable
+                return column == 5; // Only Actions column is editable
             }
         };
         JTable table = createModernTable(tableModel);
@@ -1866,8 +1837,6 @@ public class SystemUI extends JFrame {
                 a.getAttendanceId(),
                 a.getVolunteerId(),
                 a.getEventId(),
-                a.getCheckInTime(),
-                a.getCheckOutTime(),
                 String.format("%.1f hrs", a.getHoursWorked()),
                 a.getStatus(),
                 "Actions"
@@ -1955,7 +1924,7 @@ public class SystemUI extends JFrame {
     
     private void showAttendanceDialog() {
         JDialog dialog = new JDialog(this, "Record Attendance", true);
-        dialog.setSize(450, 350);
+        dialog.setSize(450, 300);
         dialog.setLocationRelativeTo(this);
         
         JPanel mainPanel = new JPanel(new BorderLayout(15, 15));
@@ -2032,7 +2001,8 @@ public class SystemUI extends JFrame {
             }
         });
         
-        JTextField attendanceIdField = createModernTextField();
+        JTextField hoursField = createModernTextField();
+        hoursField.setText("0.0");
         
         formPanel.add(createLabel("Volunteer ID:"));
         formPanel.add(volunteerIdField);
@@ -2040,20 +2010,24 @@ public class SystemUI extends JFrame {
         formPanel.add(eventComboBox);
         formPanel.add(createLabel("Event ID:"));
         formPanel.add(eventIdField);
-        formPanel.add(createLabel("Attendance ID (Check-out):"));
-        formPanel.add(attendanceIdField);
+        formPanel.add(createLabel("Hours Worked:"));
+        formPanel.add(hoursField);
         
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         buttonPanel.setBackground(CARD_BG);
         
-        JButton checkInBtn = createModernButton("Check In", GREEN);
-        checkInBtn.addActionListener(e -> {
+        JButton cancelBtn = createModernButton("Cancel", TEXT_SECONDARY);
+        cancelBtn.addActionListener(e -> dialog.dispose());
+        
+        JButton recordBtn = createModernButton("Record Attendance", GREEN);
+        recordBtn.addActionListener(e -> {
             try {
-                Attendance a = attendanceController.checkIn(
+                Attendance a = attendanceController.recordAttendance(
                     Integer.parseInt(volunteerIdField.getText()),
-                    Integer.parseInt(eventIdField.getText())
+                    Integer.parseInt(eventIdField.getText()),
+                    Double.parseDouble(hoursField.getText())
                 );
-                JOptionPane.showMessageDialog(dialog, "Checked in! Attendance ID: " + a.getAttendanceId());
+                JOptionPane.showMessageDialog(dialog, "Attendance recorded! Hours: " + a.getHoursWorked());
                 dialog.dispose();
                 refreshAllPanels();
             } catch (Exception ex) {
@@ -2061,20 +2035,8 @@ public class SystemUI extends JFrame {
             }
         });
         
-        JButton checkOutBtn = createModernButton("Check Out", ORANGE);
-        checkOutBtn.addActionListener(e -> {
-            try {
-                Attendance a = attendanceController.checkOut(Integer.parseInt(attendanceIdField.getText()));
-                JOptionPane.showMessageDialog(dialog, "Checked out! Hours: " + a.getHoursWorked());
-                dialog.dispose();
-                refreshAllPanels();
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(dialog, "Error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        });
-        
-        buttonPanel.add(checkInBtn);
-        buttonPanel.add(checkOutBtn);
+        buttonPanel.add(cancelBtn);
+        buttonPanel.add(recordBtn);
         
         mainPanel.add(formPanel, BorderLayout.CENTER);
         mainPanel.add(buttonPanel, BorderLayout.SOUTH);

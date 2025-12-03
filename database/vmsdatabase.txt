@@ -31,8 +31,8 @@
       "title": "Coastal Clean-Up",
       "eventDate": "2025-12-28",
       "location": "Hellshire Beach",
-      "capacity": 250,
-      "currentRegistrations": 0,
+      "capacity": 249,
+      "currentRegistrations": 1,
       "eventType": "COMMUNITY_SERVICE",
       "status": "DRAFT",
       "createdByAdminId": 0
@@ -51,15 +51,47 @@
       "lastModifiedDate": "2025-12-03T15:06:23.3738826"
     }
   },
-  "attendance": {},
+  "attendance": {
+    "1": {
+      "attendanceId": 1,
+      "volunteerId": 2,
+      "eventId": 2,
+      "checkInTime": "2025-12-03T15:39:55.1188831",
+      "status": "PRESENT",
+      "hoursWorked": 7.5,
+      "lastModifiedBy": "csharpe",
+      "lastModifiedDate": "2025-12-03T15:40:26.4934953"
+    }
+  },
   "announcements": {},
-  "timesheets": {},
+  "timesheets": {
+    "1": {
+      "timesheetId": 1,
+      "volunteerId": 2,
+      "eventId": 2,
+      "eventName": "Coastal Clean-Up",
+      "periodStartDate": "2025-12-28",
+      "periodEndDate": "2025-12-28",
+      "totalHours": 0.0,
+      "approvalStatus": "PENDING",
+      "createdDate": "2025-12-03T15:39:55.1296024"
+    },
+    "2": {
+      "timesheetId": 2,
+      "volunteerId": 2,
+      "periodStartDate": "2025-12-01",
+      "periodEndDate": "2025-12-03",
+      "totalHours": 0.0,
+      "approvalStatus": "APPROVED",
+      "createdDate": "2025-12-03T15:42:01.6229933"
+    }
+  },
   "admins": {
     "1": {
       "username": "admin",
       "passwordHash": "JAvlGPq9JyTdtvBO6x2llnRI1+gxwIyPqCKAn3THIKk\u003d",
       "role": "SUPER_ADMIN",
-      "lastLogin": "2025-12-03T15:05:30.0020236",
+      "lastLogin": "2025-12-03T15:51:53.7101361",
       "failedLoginAttempts": 0,
       "accountStatus": "ACTIVE",
       "createdDate": "2025-12-02T21:50:19.3207691",
@@ -73,7 +105,7 @@
       "username": "csharpe",
       "passwordHash": "75K3eLr+dx6JJFuJ7LwIpEpOFmwGZZkRiB84PURz6U8\u003d",
       "role": "VOLUNTEER",
-      "lastLogin": "2025-12-03T15:28:02.544939",
+      "lastLogin": "2025-12-03T15:39:34.2050125",
       "failedLoginAttempts": 0,
       "accountStatus": "ACTIVE",
       "createdDate": "2025-12-02T23:43:47.4293635",

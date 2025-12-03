@@ -7,7 +7,6 @@ import com.fstgc.vms.model.enums.TimesheetStatus;
 import com.fstgc.vms.repository.AttendanceRepository;
 import com.fstgc.vms.repository.EventRepository;
 import com.fstgc.vms.repository.TimesheetRepository;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -22,7 +21,7 @@ public class AttendanceService {
         this.timesheetRepository = timesheetRepository;
     }
 
-    public Attendance checkIn(int volunteerId, int eventId, LocalDateTime time) {
+    public Attendance recordAttendance(int volunteerId, int eventId, double hoursWorked) {
         // Update event registration count and capacity
         Event event = eventRepository.findById(eventId)
             .orElseThrow(() -> new IllegalArgumentException("Event not found"));
@@ -35,21 +34,22 @@ public class AttendanceService {
         event.setCapacity(event.getCapacity() - 1);
         eventRepository.update(event);
         
-        // Create attendance record
+        // Create attendance record with hours
         Attendance a = new Attendance();
         a.setVolunteerId(volunteerId);
         a.setEventId(eventId);
-        a.setCheckInTime(time);
+        a.setCheckInTime(LocalDateTime.now()); // Set to current time for record keeping
+        a.setHoursWorked(hoursWorked);
         Attendance savedAttendance = repository.save(a);
         
-        // Automatically create a timesheet for this attendance
-        createTimesheetForAttendance(volunteerId, event);
+        // Automatically create a timesheet for this attendance and update hours
+        createTimesheetForAttendance(volunteerId, event, hoursWorked);
         
         return savedAttendance;
     }
     
-    private void createTimesheetForAttendance(int volunteerId, Event event) {
-        // Create a timesheet with the event details
+    private void createTimesheetForAttendance(int volunteerId, Event event, double hours) {
+        // Create a timesheet with the event details and hours
         Timesheet timesheet = new Timesheet();
         timesheet.setVolunteerId(volunteerId);
         timesheet.setEventId(event.getEventId());
@@ -57,40 +57,13 @@ public class AttendanceService {
         // Set period to the event date
         timesheet.setPeriodStartDate(event.getEventDate());
         timesheet.setPeriodEndDate(event.getEventDate());
-        timesheet.setTotalHours(0.0); // Will be updated when hours are logged
+        timesheet.setTotalHours(hours); // Set hours directly
         timesheet.setApprovalStatus(TimesheetStatus.PENDING);
         timesheet.setCreatedDate(LocalDateTime.now());
         
         timesheetRepository.save(timesheet);
     }
 
-    public Attendance checkOut(int attendanceId, LocalDateTime time) {
-        Attendance a = repository.findById(attendanceId).orElseThrow();
-        if (a.getCheckInTime()!=null && time.isBefore(a.getCheckInTime())) throw new IllegalArgumentException("Checkout before checkin");
-        a.setCheckOutTime(time);
-        double hours = Duration.between(a.getCheckInTime(), time).toMinutes()/60.0;
-        // Round up to the nearest hour
-        a.setHoursWorked(Math.max(0, Math.ceil(hours)));
-        
-        // Update the corresponding timesheet with the hours worked
-        updateTimesheetHours(a.getVolunteerId(), a.getEventId(), a.getHoursWorked());
-        
-        return repository.update(a);
-    }
-    
-    private void updateTimesheetHours(int volunteerId, int eventId, double hours) {
-        // Find the timesheet for this volunteer and event
-        List<Timesheet> timesheets = timesheetRepository.findByVolunteer(volunteerId);
-        for (Timesheet timesheet : timesheets) {
-            if (timesheet.getEventId() != null && timesheet.getEventId() == eventId) {
-                // Update the total hours
-                timesheet.setTotalHours(Math.round((timesheet.getTotalHours() + hours) * 100.0) / 100.0);
-                timesheet.setLastModifiedDate(LocalDateTime.now());
-                timesheetRepository.update(timesheet);
-                break;
-            }
-        }
-    }
 
     public List<Attendance> byVolunteer(int volunteerId) { return repository.findByVolunteer(volunteerId); }
     
