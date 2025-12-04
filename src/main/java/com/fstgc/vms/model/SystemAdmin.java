@@ -15,6 +15,8 @@ public class SystemAdmin extends Person {
     private AccountStatus accountStatus = AccountStatus.ACTIVE;
     private LocalDateTime createdDate = LocalDateTime.now();
     private Integer createdByAdminId;
+    private String securityQuestion;
+    private String securityAnswerHash;
 
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
@@ -36,4 +38,8 @@ public class SystemAdmin extends Person {
     public void setCreatedDate(LocalDateTime createdDate) { this.createdDate = createdDate; }
     public Integer getCreatedByAdminId() { return createdByAdminId; }
     public void setCreatedByAdminId(Integer createdByAdminId) { this.createdByAdminId = createdByAdminId; }
+    public String getSecurityQuestion() { return securityQuestion; }
+    public void setSecurityQuestion(String securityQuestion) { this.securityQuestion = securityQuestion; }
+    public String getSecurityAnswerHash() { return securityAnswerHash; }
+    public void setSecurityAnswerHash(String securityAnswerHash) { this.securityAnswerHash = securityAnswerHash; }
 }

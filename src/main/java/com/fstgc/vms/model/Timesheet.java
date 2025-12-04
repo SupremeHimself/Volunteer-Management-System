@@ -9,6 +9,7 @@ public class Timesheet implements Serializable {
     private static final long serialVersionUID = 1L;
     private int timesheetId;
     private int volunteerId;
+    private Integer attendanceId; // nullable - direct link to attendance record
     private Integer eventId; // nullable - link to specific event if created from attendance
     private String eventName; // nullable - event name for reference
     private LocalDate periodStartDate;
@@ -27,6 +28,8 @@ public class Timesheet implements Serializable {
     public void setTimesheetId(int timesheetId) { this.timesheetId = timesheetId; }
     public int getVolunteerId() { return volunteerId; }
     public void setVolunteerId(int volunteerId) { this.volunteerId = volunteerId; }
+    public Integer getAttendanceId() { return attendanceId; }
+    public void setAttendanceId(Integer attendanceId) { this.attendanceId = attendanceId; }
     public Integer getEventId() { return eventId; }
     public void setEventId(Integer eventId) { this.eventId = eventId; }
     public String getEventName() { return eventName; }

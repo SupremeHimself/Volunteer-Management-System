@@ -15,6 +15,7 @@ public class TimesheetController {
     }
     public Timesheet approve(int timesheetId, int adminId) { return service.approve(timesheetId, adminId); }
     public Timesheet reject(int timesheetId, int adminId, String reason) { return service.reject(timesheetId, adminId, reason); }
+    public Timesheet submitForEvent(int volunteerId, int eventId, String eventName) { return service.submitForEvent(volunteerId, eventId, eventName); }
     public void update(Timesheet timesheet) { service.update(timesheet); }
     public java.util.List<Timesheet> listAll() { return service.listAll(); }
 }

@@ -37,6 +37,8 @@ public class AuthenticationService {
             admin.setPasswordHash(hashPassword("admin123"));
             admin.setRole(Role.SUPER_ADMIN);
             admin.setAccountStatus(AccountStatus.ACTIVE);
+            admin.setSecurityQuestion("What is the name of this system?");
+            admin.setSecurityAnswerHash(hashPassword("vms"));
             adminRepository.save(admin);
         }
     }
@@ -103,7 +105,7 @@ public class AuthenticationService {
         return currentUser != null ? currentUser.getRole() : null;
     }
 
-    public boolean register(String username, String firstName, String lastName, String email, String phone, String password) {
+    public boolean register(String username, String firstName, String lastName, String email, String phone, String password, String securityQuestion, String securityAnswer) {
         // Check if username or email already exists
         Optional<SystemAdmin> existingUsername = adminRepository.findByUsername(username);
         Optional<SystemAdmin> existingEmail = adminRepository.findByEmail(email);
@@ -121,6 +123,8 @@ public class AuthenticationService {
         admin.setPasswordHash(hashPassword(password));
         admin.setRole(Role.VOLUNTEER); // New signups get VOLUNTEER role
         admin.setAccountStatus(AccountStatus.ACTIVE);
+        admin.setSecurityQuestion(securityQuestion);
+        admin.setSecurityAnswerHash(hashPassword(securityAnswer.trim().toLowerCase()));
         adminRepository.save(admin);
 
         // Also create a Volunteer domain record so admins can manage this person
@@ -179,5 +183,68 @@ public class AuthenticationService {
         } catch (Exception e) {
             throw new RuntimeException("Error hashing password", e);
         }
+    }
+
+    /**
+     * Initiates password reset process by finding user and returning their security question.
+     * @param usernameOrEmail Username or email of the user
+     * @return Security question if user exists, null otherwise
+     */
+    public String getSecurityQuestion(String usernameOrEmail) {
+        Optional<SystemAdmin> adminOpt = adminRepository.findByUsername(usernameOrEmail);
+        return adminOpt.map(SystemAdmin::getSecurityQuestion).orElse(null);
+    }
+
+    /**
+     * Verifies security answer and resets password if answer is correct.
+     * @param usernameOrEmail Username or email of the user
+     * @param securityAnswer Answer to the security question
+     * @param newPassword New password to set
+     * @return true if password was reset successfully, false otherwise
+     */
+    public boolean resetPassword(String usernameOrEmail, String securityAnswer, String newPassword) {
+        Optional<SystemAdmin> adminOpt = adminRepository.findByUsername(usernameOrEmail);
+        
+        if (adminOpt.isEmpty()) {
+            return false;
+        }
+        
+        SystemAdmin admin = adminOpt.get();
+        
+        // Verify security answer
+        String hashedAnswer = hashPassword(securityAnswer.trim().toLowerCase());
+        if (admin.getSecurityAnswerHash() == null || !hashedAnswer.equals(admin.getSecurityAnswerHash())) {
+            return false;
+        }
+        
+        // Reset password and unlock account
+        admin.setPasswordHash(hashPassword(newPassword));
+        admin.setFailedLoginAttempts(0);
+        admin.setAccountLockedUntil(null);
+        adminRepository.updatePassword(admin.getId(), admin.getPasswordHash());
+        
+        return true;
+    }
+
+    /**
+     * Updates security question and answer for a user.
+     * @param userId User ID
+     * @param securityQuestion New security question
+     * @param securityAnswer New security answer
+     * @return true if update was successful
+     */
+    public boolean updateSecurityQuestion(int userId, String securityQuestion, String securityAnswer) {
+        Optional<SystemAdmin> adminOpt = adminRepository.findById(userId);
+        
+        if (adminOpt.isEmpty()) {
+            return false;
+        }
+        
+        SystemAdmin admin = adminOpt.get();
+        admin.setSecurityQuestion(securityQuestion);
+        admin.setSecurityAnswerHash(hashPassword(securityAnswer.trim().toLowerCase()));
+        adminRepository.updatePassword(admin.getId(), admin.getPasswordHash());
+        
+        return true;
     }
 }

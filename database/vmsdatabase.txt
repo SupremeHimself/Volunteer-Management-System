@@ -12,6 +12,17 @@
       "lastName": "Sharpe",
       "email": "carl.sharpe@test.com",
       "phone": "18761234567"
+    },
+    "3": {
+      "registrationDate": "2025-12-03T18:14:13.1419409",
+      "status": "ACTIVE",
+      "eventsAttended": 0,
+      "badgesEarned": 0,
+      "id": 3,
+      "firstName": "Test",
+      "lastName": "User",
+      "email": "test@test.com",
+      "phone": "18769999999"
     }
   },
   "events": {
@@ -46,8 +57,8 @@
       "title": "Labor Day Campus Clean-Up",
       "eventDate": "2025-10-20",
       "location": "Faculty Of Science \u0026 Technology, UWI Mona",
-      "capacity": 49,
-      "currentRegistrations": 1,
+      "capacity": 48,
+      "currentRegistrations": 2,
       "eventType": "COMMUNITY_SERVICE",
       "status": "COMPLETED",
       "createdByAdminId": 0,
@@ -65,9 +76,28 @@
       "hoursWorked": 50.0,
       "lastModifiedBy": "csharpe",
       "lastModifiedDate": "2025-12-03T17:51:35.6606877"
+    },
+    "2": {
+      "attendanceId": 2,
+      "volunteerId": 3,
+      "eventId": 3,
+      "checkInTime": "2025-12-03T18:16:25.4168153",
+      "status": "PRESENT",
+      "hoursWorked": 20.0
     }
   },
-  "announcements": {},
+  "announcements": {
+    "1": {
+      "announcementId": 1,
+      "title": "Test",
+      "message": "testing functionality",
+      "publishedDate": "2025-12-03T18:17:44.1311055",
+      "priority": "HIGH",
+      "targetAudience": "ALL",
+      "createdByAdminId": 0,
+      "deleted": false
+    }
+  },
   "timesheets": {
     "1": {
       "timesheetId": 1,
@@ -97,6 +127,26 @@
       "totalHours": 0.0,
       "approvalStatus": "APPROVED",
       "createdDate": "2025-12-03T17:36:25.1125891"
+    },
+    "4": {
+      "timesheetId": 4,
+      "volunteerId": 3,
+      "eventId": 3,
+      "eventName": "Labor Day Campus Clean-Up",
+      "periodStartDate": "2025-10-20",
+      "periodEndDate": "2025-10-20",
+      "totalHours": 20.0,
+      "approvalStatus": "PENDING",
+      "createdDate": "2025-12-03T18:16:25.4168153"
+    },
+    "5": {
+      "timesheetId": 5,
+      "volunteerId": 2,
+      "periodStartDate": "2025-12-01",
+      "periodEndDate": "2025-12-03",
+      "totalHours": 0.0,
+      "approvalStatus": "PENDING",
+      "createdDate": "2025-12-03T18:36:29.1597815"
     }
   },
   "admins": {
@@ -104,7 +154,7 @@
       "username": "admin",
       "passwordHash": "JAvlGPq9JyTdtvBO6x2llnRI1+gxwIyPqCKAn3THIKk\u003d",
       "role": "SUPER_ADMIN",
-      "lastLogin": "2025-12-03T17:47:08.7818376",
+      "lastLogin": "2025-12-03T18:15:28.8129666",
       "failedLoginAttempts": 0,
       "accountStatus": "ACTIVE",
       "createdDate": "2025-12-02T21:50:19.3207691",
@@ -118,7 +168,7 @@
       "username": "csharpe",
       "passwordHash": "75K3eLr+dx6JJFuJ7LwIpEpOFmwGZZkRiB84PURz6U8\u003d",
       "role": "VOLUNTEER",
-      "lastLogin": "2025-12-03T18:02:03.8280935",
+      "lastLogin": "2025-12-03T19:03:52.3270868",
       "failedLoginAttempts": 0,
       "accountStatus": "ACTIVE",
       "createdDate": "2025-12-02T23:43:47.4293635",
@@ -127,6 +177,20 @@
       "lastName": "Sharpe",
       "email": "carl.sharpe@test.com",
       "phone": "18761234567"
+    },
+    "3": {
+      "username": "testuser",
+      "passwordHash": "XohImNooBHFR0OVvjcYpJ3NgPQ1qq73WKhHvch0VQtg\u003d",
+      "role": "VOLUNTEER",
+      "lastLogin": "2025-12-03T18:18:23.5469661",
+      "failedLoginAttempts": 0,
+      "accountStatus": "ACTIVE",
+      "createdDate": "2025-12-03T18:14:13.1389079",
+      "id": 3,
+      "firstName": "Test",
+      "lastName": "User",
+      "email": "test@test.com",
+      "phone": "18769999999"
     }
   },
   "awards": {
@@ -158,6 +222,16 @@
       "criteriaId": 1744481024,
       "dateEarned": "2025-12-03T17:51:36.7772195",
       "badgeTier": "SILVER",
+      "featured": false
+    },
+    "4": {
+      "awardId": 4,
+      "volunteerId": 3,
+      "badgeName": "First Steps",
+      "badgeDescription": "Completed 10 hours of volunteer work",
+      "criteriaId": -855724681,
+      "dateEarned": "2025-12-03T18:16:27.1446307",
+      "badgeTier": "BRONZE",
       "featured": false
     }
   }

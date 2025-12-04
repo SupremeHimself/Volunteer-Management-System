@@ -1392,6 +1392,11 @@ public class SystemUI extends JFrame {
         titleLabel.setForeground(TEXT_PRIMARY);
         titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         
+        JLabel eventIdLabel = new JLabel("Event ID: " + event.getEventId());
+        eventIdLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        eventIdLabel.setForeground(TEXT_SECONDARY);
+        eventIdLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        
         JLabel typeLabel = new JLabel(event.getEventType().toString().replace("_", " "));
         typeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 10));
         typeLabel.setForeground(Color.WHITE);
@@ -1450,6 +1455,8 @@ public class SystemUI extends JFrame {
         capacityLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         
         contentPanel.add(titleLabel);
+        contentPanel.add(Box.createVerticalStrut(3));
+        contentPanel.add(eventIdLabel);
         contentPanel.add(Box.createVerticalStrut(5));
         contentPanel.add(typeLabel);
         if (statusLabel != null) {
@@ -2145,24 +2152,114 @@ public class SystemUI extends JFrame {
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 28));
         titleLabel.setForeground(TEXT_PRIMARY);
         
-        JButton createBtn = createModernButton("+ Create Timesheet", GREEN);
-        createBtn.addActionListener(e -> showCreateTimesheetDialog());
+        JButton createBtn = createModernButton("+ Submit Timesheet", GREEN);
+        Role currentRole = authService.getCurrentUser().getRole();
+        if (currentRole == Role.VOLUNTEER) {
+            createBtn.addActionListener(e -> showSubmitTimesheetDialog(authService.getCurrentUser().getId()));
+        } else {
+            createBtn.addActionListener(e -> showCreateTimesheetDialog());
+        }
         
         headerPanel.add(titleLabel, BorderLayout.WEST);
         headerPanel.add(createBtn, BorderLayout.EAST);
         
         panel.add(headerPanel, BorderLayout.NORTH);
 
-        // Cards grid
-        JPanel cardsPanel = new JPanel(new GridLayout(0, 3, 15, 15));
-        cardsPanel.setBackground(GRAY_BG);
-        
-        List<Volunteer> volunteers = volunteerController.listAll();
-        for (Volunteer vol : volunteers) {
-            cardsPanel.add(createTimesheetCard(vol));
+        // Get all timesheets and filter by role
+        List<Timesheet> allTimesheets = timesheetController.listAll();
+        if (currentRole == Role.VOLUNTEER) {
+            int currentUserId = authService.getCurrentUser().getId();
+            allTimesheets = allTimesheets.stream()
+                .filter(ts -> ts.getVolunteerId() == currentUserId)
+                .toList();
         }
         
-        JScrollPane scrollPane = new JScrollPane(cardsPanel);
+        // Separate into pending, approved, and rejected
+        List<Timesheet> pendingTimesheets = allTimesheets.stream()
+            .filter(ts -> ts.getApprovalStatus() == TimesheetStatus.PENDING)
+            .sorted((ts1, ts2) -> ts2.getCreatedDate().compareTo(ts1.getCreatedDate()))
+            .toList();
+            
+        List<Timesheet> approvedTimesheets = allTimesheets.stream()
+            .filter(ts -> ts.getApprovalStatus() == TimesheetStatus.APPROVED)
+            .sorted((ts1, ts2) -> ts2.getCreatedDate().compareTo(ts1.getCreatedDate()))
+            .toList();
+            
+        List<Timesheet> rejectedTimesheets = allTimesheets.stream()
+            .filter(ts -> ts.getApprovalStatus() == TimesheetStatus.REJECTED)
+            .sorted((ts1, ts2) -> ts2.getCreatedDate().compareTo(ts1.getCreatedDate()))
+            .toList();
+        
+        // Create main content panel with sections
+        JPanel contentPanel = new JPanel();
+        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
+        contentPanel.setBackground(GRAY_BG);
+        
+        // Pending Section
+        JLabel pendingLabel = new JLabel("⏳ Pending Timesheets (" + pendingTimesheets.size() + ")");
+        pendingLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        pendingLabel.setForeground(ORANGE);
+        pendingLabel.setBorder(new EmptyBorder(10, 0, 10, 0));
+        contentPanel.add(pendingLabel);
+        
+        JPanel pendingGrid = new JPanel(new GridLayout(0, 3, 15, 15));
+        pendingGrid.setBackground(GRAY_BG);
+        for (Timesheet ts : pendingTimesheets) {
+            pendingGrid.add(createTimesheetCard(ts));
+        }
+        if (pendingTimesheets.isEmpty()) {
+            JLabel emptyLabel = new JLabel("No pending timesheets");
+            emptyLabel.setFont(new Font("Segoe UI", Font.ITALIC, 14));
+            emptyLabel.setForeground(TEXT_SECONDARY);
+            pendingGrid.add(emptyLabel);
+        }
+        contentPanel.add(pendingGrid);
+        
+        contentPanel.add(Box.createVerticalStrut(30));
+        
+        // Approved Section
+        JLabel approvedLabel = new JLabel("✓ Approved Timesheets (" + approvedTimesheets.size() + ")");
+        approvedLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        approvedLabel.setForeground(GREEN);
+        approvedLabel.setBorder(new EmptyBorder(10, 0, 10, 0));
+        contentPanel.add(approvedLabel);
+        
+        JPanel approvedGrid = new JPanel(new GridLayout(0, 3, 15, 15));
+        approvedGrid.setBackground(GRAY_BG);
+        for (Timesheet ts : approvedTimesheets) {
+            approvedGrid.add(createTimesheetCard(ts));
+        }
+        if (approvedTimesheets.isEmpty()) {
+            JLabel emptyLabel = new JLabel("No approved timesheets");
+            emptyLabel.setFont(new Font("Segoe UI", Font.ITALIC, 14));
+            emptyLabel.setForeground(TEXT_SECONDARY);
+            approvedGrid.add(emptyLabel);
+        }
+        contentPanel.add(approvedGrid);
+        
+        contentPanel.add(Box.createVerticalStrut(30));
+        
+        // Rejected Section
+        JLabel rejectedLabel = new JLabel("✕ Rejected Timesheets (" + rejectedTimesheets.size() + ")");
+        rejectedLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        rejectedLabel.setForeground(new Color(239, 68, 68));
+        rejectedLabel.setBorder(new EmptyBorder(10, 0, 10, 0));
+        contentPanel.add(rejectedLabel);
+        
+        JPanel rejectedGrid = new JPanel(new GridLayout(0, 3, 15, 15));
+        rejectedGrid.setBackground(GRAY_BG);
+        for (Timesheet ts : rejectedTimesheets) {
+            rejectedGrid.add(createTimesheetCard(ts));
+        }
+        if (rejectedTimesheets.isEmpty()) {
+            JLabel emptyLabel = new JLabel("No rejected timesheets");
+            emptyLabel.setFont(new Font("Segoe UI", Font.ITALIC, 14));
+            emptyLabel.setForeground(TEXT_SECONDARY);
+            rejectedGrid.add(emptyLabel);
+        }
+        contentPanel.add(rejectedGrid);
+        
+        JScrollPane scrollPane = new JScrollPane(contentPanel);
         scrollPane.setBorder(null);
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         scrollPane.setBackground(GRAY_BG);
@@ -2171,127 +2268,182 @@ public class SystemUI extends JFrame {
         return panel;
     }
     
-    private JPanel createTimesheetCard(Volunteer vol) {
+    private JPanel createTimesheetCard(Timesheet timesheet) {
         JPanel card = createModernCard();
         card.setLayout(new BorderLayout(10, 10));
-        card.setPreferredSize(new Dimension(280, 220));
+        card.setPreferredSize(new Dimension(300, 240));
+        
+        // Color bar at top based on status
+        JPanel colorBar = new JPanel();
+        colorBar.setPreferredSize(new Dimension(0, 4));
+        Color barColor;
+        switch (timesheet.getApprovalStatus()) {
+            case APPROVED:
+                barColor = GREEN;
+                break;
+            case REJECTED:
+                barColor = new Color(239, 68, 68);
+                break;
+            default:
+                barColor = ORANGE;
+        }
+        colorBar.setBackground(barColor);
+        card.add(colorBar, BorderLayout.NORTH);
         
         JPanel contentPanel = new JPanel();
         contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
         contentPanel.setBackground(CARD_BG);
         
-        // Avatar
-        JPanel avatarPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        avatarPanel.setBackground(CARD_BG);
-        JLabel avatar = new JLabel(vol.getFirstName().substring(0,1) + vol.getLastName().substring(0,1));
-        avatar.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        avatar.setForeground(Color.WHITE);
-        avatar.setOpaque(true);
-        avatar.setBackground(PRIMARY_BLUE);
-        avatar.setPreferredSize(new Dimension(50, 50));
-        avatar.setHorizontalAlignment(SwingConstants.CENTER);
-        avatar.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        avatarPanel.add(avatar);
+        // Get volunteer info
+        Volunteer volunteer = volunteerController.get(timesheet.getVolunteerId()).orElse(null);
+        String volunteerName = volunteer != null ? 
+            volunteer.getFirstName() + " " + volunteer.getLastName() : "Unknown";
         
-        JPanel namePanel = new JPanel();
-        namePanel.setLayout(new BoxLayout(namePanel, BoxLayout.Y_AXIS));
-        namePanel.setBackground(CARD_BG);
-        JLabel nameLabel = new JLabel(vol.getFirstName() + " " + vol.getLastName());
-        nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        // Volunteer name
+        JLabel nameLabel = new JLabel(volunteerName);
+        nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
         nameLabel.setForeground(TEXT_PRIMARY);
-        JLabel periodLabel = new JLabel("November 2025");
-        periodLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        periodLabel.setForeground(TEXT_SECONDARY);
-        namePanel.add(nameLabel);
-        namePanel.add(periodLabel);
-        avatarPanel.add(namePanel);
+        nameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         
-        contentPanel.add(avatarPanel);
-        contentPanel.add(Box.createVerticalStrut(10));
+        // Timesheet ID
+        JLabel timesheetIdLabel = new JLabel("Timesheet ID: " + timesheet.getTimesheetId());
+        timesheetIdLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        timesheetIdLabel.setForeground(TEXT_SECONDARY);
+        timesheetIdLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         
-        // Stats
-        JPanel statsPanel = new JPanel(new GridLayout(3, 2, 5, 8));
-        statsPanel.setBackground(CARD_BG);
-        statsPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        // Attendance ID (if linked)
+        JLabel attendanceIdLabel = null;
+        if (timesheet.getAttendanceId() != null) {
+            attendanceIdLabel = new JLabel("Attendance ID: " + timesheet.getAttendanceId());
+            attendanceIdLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            attendanceIdLabel.setForeground(TEXT_SECONDARY);
+            attendanceIdLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        }
         
-        statsPanel.add(createLabel("Total Hours:"));
-        JLabel hoursLabel = new JLabel(String.format("%.1f hrs", calculateTotalHours(vol.getId())));
-        hoursLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        statsPanel.add(hoursLabel);
+        // Event name and Event ID
+        JLabel eventLabel = new JLabel(timesheet.getEventName() != null ? timesheet.getEventName() : "N/A");
+        eventLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        eventLabel.setForeground(PRIMARY_BLUE);
+        eventLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         
-        statsPanel.add(createLabel("Events Attended:"));
-        // Count actual events attended from attendance records
-        int eventsAttended = calculateEventsAttended(vol.getId());
-        JLabel eventsLabel = new JLabel(String.valueOf(eventsAttended));
-        eventsLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        statsPanel.add(eventsLabel);
+        JLabel eventIdLabel = new JLabel("Event ID: " + (timesheet.getEventId() != null ? timesheet.getEventId() : "N/A"));
+        eventIdLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        eventIdLabel.setForeground(TEXT_SECONDARY);
+        eventIdLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         
-        statsPanel.add(createLabel("Status:"));
-        JLabel statusLabel = new JLabel("Approved");
-        statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        // Status badge
+        JLabel statusLabel = new JLabel(timesheet.getApprovalStatus().toString());
+        statusLabel.setFont(new Font("Segoe UI", Font.BOLD, 10));
         statusLabel.setForeground(Color.WHITE);
         statusLabel.setOpaque(true);
-        statusLabel.setBackground(GREEN);
-        statusLabel.setBorder(new EmptyBorder(3, 8, 3, 8));
-        statsPanel.add(statusLabel);
-        
-        contentPanel.add(statsPanel);
-        contentPanel.add(Box.createVerticalStrut(10));
-        
-        // Show timesheet events
-        List<Timesheet> volunteerTimesheets = timesheetController.listAll().stream()
-            .filter(ts -> ts.getVolunteerId() == vol.getId())
-            .filter(ts -> ts.getEventName() != null) // Only show timesheets with events
-            .limit(3) // Show max 3 recent events
-            .toList();
-        
-        if (!volunteerTimesheets.isEmpty()) {
-            JPanel eventsPanel = new JPanel();
-            eventsPanel.setLayout(new BoxLayout(eventsPanel, BoxLayout.Y_AXIS));
-            eventsPanel.setBackground(CARD_BG);
-            eventsPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            
-            JLabel eventsTitle = new JLabel("Recent Events:");
-            eventsTitle.setFont(new Font("Segoe UI", Font.BOLD, 11));
-            eventsTitle.setForeground(TEXT_SECONDARY);
-            eventsPanel.add(eventsTitle);
-            eventsPanel.add(Box.createVerticalStrut(5));
-            
-            for (Timesheet ts : volunteerTimesheets) {
-                JLabel eventLabel = new JLabel("• " + ts.getEventName() + " (" + String.format("%.1f", ts.getTotalHours()) + " hrs)");
-                eventLabel.setFont(new Font("Segoe UI", Font.PLAIN, 10));
-                eventLabel.setForeground(TEXT_PRIMARY);
-                eventsPanel.add(eventLabel);
-            }
-            
-            contentPanel.add(eventsPanel);
+        Color statusColor;
+        switch (timesheet.getApprovalStatus()) {
+            case APPROVED:
+                statusColor = GREEN;
+                break;
+            case REJECTED:
+                statusColor = new Color(239, 68, 68);
+                break;
+            default:
+                statusColor = ORANGE;
         }
+        statusLabel.setBackground(statusColor);
+        statusLabel.setBorder(new EmptyBorder(3, 8, 3, 8));
+        statusLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        
+        // Use emoji-supporting font
+        Font emojiFont = getEmojiFont(11);
+        
+        // Date info
+        JLabel dateLabel = new JLabel("📅 " + timesheet.getPeriodStartDate());
+        dateLabel.setFont(emojiFont);
+        dateLabel.setForeground(TEXT_SECONDARY);
+        dateLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        
+        // Hours
+        JLabel hoursLabel = new JLabel("⏱️ Hours: " + String.format("%.1f", timesheet.getTotalHours()));
+        hoursLabel.setFont(emojiFont);
+        hoursLabel.setForeground(TEXT_SECONDARY);
+        hoursLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        
+        // Submitted date
+        JLabel submittedLabel = new JLabel("📤 Submitted: " + timesheet.getCreatedDate().toLocalDate());
+        submittedLabel.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+        submittedLabel.setForeground(TEXT_SECONDARY);
+        submittedLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        
+        contentPanel.add(nameLabel);
+        contentPanel.add(Box.createVerticalStrut(3));
+        contentPanel.add(timesheetIdLabel);
+        if (attendanceIdLabel != null) {
+            contentPanel.add(Box.createVerticalStrut(2));
+            contentPanel.add(attendanceIdLabel);
+        }
+        contentPanel.add(Box.createVerticalStrut(8));
+        contentPanel.add(eventLabel);
+        contentPanel.add(Box.createVerticalStrut(3));
+        contentPanel.add(eventIdLabel);
+        contentPanel.add(Box.createVerticalStrut(5));
+        contentPanel.add(statusLabel);
+        contentPanel.add(Box.createVerticalStrut(10));
+        contentPanel.add(dateLabel);
+        contentPanel.add(Box.createVerticalStrut(3));
+        contentPanel.add(hoursLabel);
+        contentPanel.add(Box.createVerticalStrut(3));
+        contentPanel.add(submittedLabel);
         
         card.add(contentPanel, BorderLayout.CENTER);
         
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
-        buttonPanel.setBackground(CARD_BG);
-        JButton submitBtn = createModernButton("Submit Timesheet", GREEN);
-        submitBtn.addActionListener(e -> showSubmitTimesheetDialog(vol.getId()));
-        buttonPanel.add(submitBtn);
+        // Action buttons
+        Role currentRole = authService.getCurrentUser().getRole();
+        boolean isAdmin = (currentRole == Role.ADMIN || currentRole == Role.SUPER_ADMIN);
         
-        // Add Edit button for admin
-        if (authService.getCurrentUser().getRole() == Role.SUPER_ADMIN || 
-            authService.getCurrentUser().getRole() == Role.ADMIN) {
-            JButton editBtn = new JButton("Edit");
-            editBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-            editBtn.setForeground(PRIMARY_BLUE);
-            editBtn.setBackground(Color.WHITE);
-            editBtn.setBorder(BorderFactory.createLineBorder(PRIMARY_BLUE, 1));
-            editBtn.setFocusPainted(false);
-            editBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            editBtn.addActionListener(e -> showEditTimesheetDialog(vol.getId()));
-            buttonPanel.add(editBtn);
+        if (isAdmin && timesheet.getApprovalStatus() == TimesheetStatus.PENDING) {
+            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
+            buttonPanel.setBackground(CARD_BG);
+            
+            JButton approveBtn = new JButton("Approve");
+            approveBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            approveBtn.setForeground(Color.WHITE);
+            approveBtn.setBackground(GREEN);
+            approveBtn.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
+            approveBtn.setFocusPainted(false);
+            approveBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            approveBtn.addActionListener(e -> {
+                timesheetController.approve(timesheet.getTimesheetId(), authService.getCurrentUser().getId());
+                refreshTimesheetPanel();
+                JOptionPane.showMessageDialog(this, "Timesheet approved successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+            });
+            
+            JButton rejectBtn = new JButton("Reject");
+            rejectBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            rejectBtn.setForeground(Color.WHITE);
+            rejectBtn.setBackground(new Color(239, 68, 68));
+            rejectBtn.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
+            rejectBtn.setFocusPainted(false);
+            rejectBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            rejectBtn.addActionListener(e -> {
+                String reason = JOptionPane.showInputDialog(this, 
+                    "Enter reason for rejection:", 
+                    "Reject Timesheet", 
+                    JOptionPane.QUESTION_MESSAGE);
+                if (reason != null && !reason.trim().isEmpty()) {
+                    timesheetController.reject(timesheet.getTimesheetId(), authService.getCurrentUser().getId(), reason);
+                    refreshTimesheetPanel();
+                    JOptionPane.showMessageDialog(this, "Timesheet rejected.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                }
+            });
+            
+            buttonPanel.add(approveBtn);
+            buttonPanel.add(rejectBtn);
+            card.add(buttonPanel, BorderLayout.SOUTH);
         }
         
-        card.add(buttonPanel, BorderLayout.SOUTH);
-        
         return card;
+    }
+    
+    private void refreshTimesheetPanel() {
+        tabbedPane.setComponentAt(4, createTimesheetPanel());
     }
 
     private JPanel createAnnouncementPanel() {
@@ -2407,41 +2559,44 @@ public class SystemUI extends JFrame {
         
         card.add(contentPanel, BorderLayout.CENTER);
         
-        // Action buttons
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
-        buttonPanel.setBackground(CARD_BG);
-        
-        JButton editBtn = new JButton("Edit");
-        editBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        editBtn.setForeground(PRIMARY_BLUE);
-        editBtn.setBackground(Color.WHITE);
-        editBtn.setBorder(BorderFactory.createLineBorder(PRIMARY_BLUE, 1));
-        editBtn.setFocusPainted(false);
-        editBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        editBtn.addActionListener(e -> showEditAnnouncementDialog(ann.getAnnouncementId()));
-        
-        JButton deleteBtn = new JButton("Delete");
-        deleteBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        deleteBtn.setForeground(new Color(239, 68, 68));
-        deleteBtn.setBackground(Color.WHITE);
-        deleteBtn.setBorder(BorderFactory.createLineBorder(new Color(239, 68, 68), 1));
-        deleteBtn.setFocusPainted(false);
-        deleteBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        deleteBtn.addActionListener(e -> {
-            int confirm = JOptionPane.showConfirmDialog(this,
-                "Are you sure you want to delete announcement: " + ann.getTitle() + "?",
-                "Confirm Delete",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE);
-            if (confirm == JOptionPane.YES_OPTION) {
-                deleteAnnouncement(ann.getAnnouncementId());
-            }
-        });
-        
-        buttonPanel.add(editBtn);
-        buttonPanel.add(deleteBtn);
-        
-        card.add(buttonPanel, BorderLayout.SOUTH);
+        // Action buttons - only for admins
+        Role currentRole = authService.getCurrentUser().getRole();
+        if (currentRole == Role.ADMIN || currentRole == Role.SUPER_ADMIN) {
+            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
+            buttonPanel.setBackground(CARD_BG);
+            
+            JButton editBtn = new JButton("Edit");
+            editBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            editBtn.setForeground(PRIMARY_BLUE);
+            editBtn.setBackground(Color.WHITE);
+            editBtn.setBorder(BorderFactory.createLineBorder(PRIMARY_BLUE, 1));
+            editBtn.setFocusPainted(false);
+            editBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            editBtn.addActionListener(e -> showEditAnnouncementDialog(ann.getAnnouncementId()));
+            
+            JButton deleteBtn = new JButton("Delete");
+            deleteBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            deleteBtn.setForeground(new Color(239, 68, 68));
+            deleteBtn.setBackground(Color.WHITE);
+            deleteBtn.setBorder(BorderFactory.createLineBorder(new Color(239, 68, 68), 1));
+            deleteBtn.setFocusPainted(false);
+            deleteBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            deleteBtn.addActionListener(e -> {
+                int confirm = JOptionPane.showConfirmDialog(this,
+                    "Are you sure you want to delete announcement: " + ann.getTitle() + "?",
+                    "Confirm Delete",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
+                if (confirm == JOptionPane.YES_OPTION) {
+                    deleteAnnouncement(ann.getAnnouncementId());
+                }
+            });
+            
+            buttonPanel.add(editBtn);
+            buttonPanel.add(deleteBtn);
+            
+            card.add(buttonPanel, BorderLayout.SOUTH);
+        }
         
         return card;
     }
@@ -3098,44 +3253,127 @@ public class SystemUI extends JFrame {
     }
     
     private void showSubmitTimesheetDialog(int volunteerId) {
-        JDialog dialog = new JDialog(this, "Submit Timesheet", true);
-        dialog.setSize(450, 300);
+        Role currentRole = authService.getCurrentUser().getRole();
+        boolean isVolunteer = (currentRole == Role.VOLUNTEER);
+        
+        // If volunteer, ensure they can only submit for their own ID
+        if (isVolunteer && volunteerId != authService.getCurrentUser().getId()) {
+            JOptionPane.showMessageDialog(this, 
+                "You can only submit timesheets for yourself!", 
+                "Access Denied", 
+                JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
+        // Get completed attendance records for this volunteer that don't have timesheets yet
+        List<Attendance> completedAttendance = attendanceController.listAll().stream()
+            .filter(a -> a.getVolunteerId() == volunteerId)
+            .filter(a -> a.getCheckInTime() != null && a.getCheckOutTime() != null)
+            .filter(a -> a.getHoursWorked() > 0)
+            .toList();
+        
+        // Filter out events that already have timesheets
+        List<Integer> existingTimesheetEventIds = timesheetController.listAll().stream()
+            .filter(ts -> ts.getVolunteerId() == volunteerId)
+            .filter(ts -> ts.getEventId() != null)
+            .map(Timesheet::getEventId)
+            .toList();
+        
+        List<Attendance> availableAttendance = completedAttendance.stream()
+            .filter(a -> !existingTimesheetEventIds.contains(a.getEventId()))
+            .toList();
+        
+        if (availableAttendance.isEmpty()) {
+            JOptionPane.showMessageDialog(this, 
+                "No events available for timesheet submission.\n\nEither you haven't attended any events, or you've already\nsubmitted timesheets for all attended events.\n\nNote: Each event requires a separate timesheet.", 
+                "No Events Available", 
+                JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        
+        // Create event selection dialog
+        JDialog dialog = new JDialog(this, "Submit Timesheet for Event", true);
+        dialog.setSize(500, 450);
         dialog.setLocationRelativeTo(this);
         
         JPanel mainPanel = new JPanel(new BorderLayout(15, 15));
         mainPanel.setBackground(CARD_BG);
         mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
         
-        // Check user role to determine if status field should be shown
-        Role currentRole = authService.getCurrentUser().getRole();
-        boolean canChangeStatus = (currentRole == Role.ADMIN || currentRole == Role.SUPER_ADMIN);
+        JPanel headerPanel = new JPanel();
+        headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
+        headerPanel.setBackground(CARD_BG);
         
-        // Adjust grid rows based on permission
-        int gridRows = canChangeStatus ? 3 : 2;
-        JPanel formPanel = new JPanel(new GridLayout(gridRows, 2, 10, 15));
-        formPanel.setBackground(CARD_BG);
+        JLabel titleLabel = new JLabel("Submit Timesheet for Individual Event");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setForeground(TEXT_PRIMARY);
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
-        JTextField startDateField = createModernTextField();
-        startDateField.setText(LocalDate.now().withDayOfMonth(1).format(formatter));
-        JTextField endDateField = createModernTextField();
-        endDateField.setText(LocalDate.now().format(formatter));
+        JLabel instructionLabel = new JLabel("Select one event to submit a timesheet for:");
+        instructionLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        instructionLabel.setForeground(TEXT_SECONDARY);
+        instructionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         
-        // Default status is always PENDING
-        JComboBox<TimesheetStatus> statusCombo = new JComboBox<>(TimesheetStatus.values());
-        statusCombo.setSelectedItem(TimesheetStatus.PENDING);
-        statusCombo.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        headerPanel.add(titleLabel);
+        headerPanel.add(Box.createVerticalStrut(8));
+        headerPanel.add(instructionLabel);
         
-        formPanel.add(createLabel("Start Date (MM-DD-YYYY):"));
-        formPanel.add(startDateField);
-        formPanel.add(createLabel("End Date (MM-DD-YYYY):"));
-        formPanel.add(endDateField);
+        mainPanel.add(headerPanel, BorderLayout.NORTH);
         
-        // Only show status field to admins
-        if (canChangeStatus) {
-            formPanel.add(createLabel("Status:"));
-            formPanel.add(statusCombo);
+        // Create list of events
+        JPanel eventsPanel = new JPanel();
+        eventsPanel.setLayout(new BoxLayout(eventsPanel, BoxLayout.Y_AXIS));
+        eventsPanel.setBackground(CARD_BG);
+        
+        ButtonGroup eventGroup = new ButtonGroup();
+        
+        for (Attendance att : availableAttendance) {
+            Event event = eventController.get(att.getEventId());
+            if (event != null) {
+                JPanel eventCard = new JPanel(new BorderLayout(10, 5));
+                eventCard.setBackground(Color.WHITE);
+                eventCard.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(209, 213, 219), 1),
+                    new EmptyBorder(10, 10, 10, 10)
+                ));
+                eventCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
+                
+                JRadioButton radioBtn = new JRadioButton();
+                radioBtn.setBackground(Color.WHITE);
+                radioBtn.putClientProperty("eventId", event.getEventId());
+                radioBtn.putClientProperty("eventName", event.getTitle());
+                radioBtn.putClientProperty("hours", att.getHoursWorked());
+                eventGroup.add(radioBtn);
+                
+                JPanel infoPanel = new JPanel();
+                infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
+                infoPanel.setBackground(Color.WHITE);
+                
+                JLabel eventTitle = new JLabel(event.getTitle());
+                eventTitle.setFont(new Font("Segoe UI", Font.BOLD, 14));
+                eventTitle.setForeground(TEXT_PRIMARY);
+                
+                JLabel eventDetails = new JLabel(String.format("Date: %s | Hours: %.1f", 
+                    event.getEventDate(), att.getHoursWorked()));
+                eventDetails.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                eventDetails.setForeground(TEXT_SECONDARY);
+                
+                infoPanel.add(eventTitle);
+                infoPanel.add(eventDetails);
+                
+                eventCard.add(radioBtn, BorderLayout.WEST);
+                eventCard.add(infoPanel, BorderLayout.CENTER);
+                
+                eventsPanel.add(eventCard);
+                eventsPanel.add(Box.createVerticalStrut(10));
+            }
         }
+        
+        JScrollPane scrollPane = new JScrollPane(eventsPanel);
+        scrollPane.setBorder(null);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        
+        mainPanel.add(scrollPane, BorderLayout.CENTER);
         
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         buttonPanel.setBackground(CARD_BG);
@@ -3143,37 +3381,42 @@ public class SystemUI extends JFrame {
         JButton cancelBtn = createModernButton("Cancel", TEXT_SECONDARY);
         cancelBtn.addActionListener(e -> dialog.dispose());
         
-        JButton submitBtn = createModernButton("Submit", GREEN);
+        JButton submitBtn = createModernButton("Submit for This Event", GREEN);
         submitBtn.addActionListener(e -> {
-            try {
-                DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
-                // Volunteers and coordinators can only submit as PENDING
-                TimesheetStatus status = canChangeStatus ? 
-                    (TimesheetStatus) statusCombo.getSelectedItem() : 
-                    TimesheetStatus.PENDING;
-                    
-                Timesheet ts = timesheetController.submit(
-                    volunteerId,
-                    LocalDate.parse(startDateField.getText(), inputFormatter),
-                    LocalDate.parse(endDateField.getText(), inputFormatter),
-                    status
-                );
-                JOptionPane.showMessageDialog(dialog, 
-                    "Timesheet submitted successfully!\\nID: " + ts.getTimesheetId() + "\\nTotal Hours: " + ts.getTotalHours(),
-                    "Success", JOptionPane.INFORMATION_MESSAGE);
-                dialog.dispose();
-                refreshAllPanels();
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(dialog, 
-                    "Error: " + ex.getMessage(), 
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            // Find selected event
+            for (java.util.Enumeration<javax.swing.AbstractButton> buttons = eventGroup.getElements(); buttons.hasMoreElements();) {
+                javax.swing.AbstractButton button = buttons.nextElement();
+                if (button.isSelected()) {
+                    try {
+                        int eventId = (int) ((JRadioButton) button).getClientProperty("eventId");
+                        String eventName = (String) ((JRadioButton) button).getClientProperty("eventName");
+                        
+                        Timesheet ts = timesheetController.submitForEvent(volunteerId, eventId, eventName);
+                        
+                        JOptionPane.showMessageDialog(dialog, 
+                            "Timesheet submitted successfully for this event!\n\nEvent: " + eventName + "\nTotal Hours: " + ts.getTotalHours() + "\nStatus: PENDING\n\nNote: Each event requires a separate timesheet submission.",
+                            "Success", JOptionPane.INFORMATION_MESSAGE);
+                        dialog.dispose();
+                        refreshAllPanels();
+                        return;
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(dialog, 
+                            "Error: " + ex.getMessage(), 
+                            "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+                }
             }
+            
+            JOptionPane.showMessageDialog(dialog, 
+                "Please select an event.", 
+                "No Selection", 
+                JOptionPane.WARNING_MESSAGE);
         });
         
         buttonPanel.add(cancelBtn);
         buttonPanel.add(submitBtn);
         
-        mainPanel.add(formPanel, BorderLayout.CENTER);
         mainPanel.add(buttonPanel, BorderLayout.SOUTH);
         
         dialog.add(mainPanel);
@@ -3287,10 +3530,29 @@ public class SystemUI extends JFrame {
                 timesheet.setPeriodStartDate(LocalDate.parse(startDateField.getText(), inputFormatter));
                 timesheet.setPeriodEndDate(LocalDate.parse(endDateField.getText(), inputFormatter));
                 timesheet.setTotalHours(Double.parseDouble(totalHoursField.getText()));
-                // Only allow admins to change status, volunteers keep existing status
+                
+                // Handle status changes with proper approval workflow
                 if (canChangeStatus) {
-                    timesheet.setApprovalStatus((TimesheetStatus) statusCombo.getSelectedItem());
+                    TimesheetStatus newStatus = (TimesheetStatus) statusCombo.getSelectedItem();
+                    TimesheetStatus oldStatus = timesheet.getApprovalStatus();
+                    
+                    if (newStatus == TimesheetStatus.APPROVED && oldStatus != TimesheetStatus.APPROVED) {
+                        // Use approve method for proper approval tracking
+                        timesheetController.approve(timesheet.getTimesheetId(), authService.getCurrentUser().getId());
+                    } else if (newStatus == TimesheetStatus.REJECTED && oldStatus != TimesheetStatus.REJECTED) {
+                        // Use reject method - prompt for reason
+                        String reason = JOptionPane.showInputDialog(dialog, "Enter rejection reason:", "Rejection Reason", JOptionPane.QUESTION_MESSAGE);
+                        if (reason != null && !reason.trim().isEmpty()) {
+                            timesheetController.reject(timesheet.getTimesheetId(), authService.getCurrentUser().getId(), reason);
+                        } else {
+                            JOptionPane.showMessageDialog(dialog, "Rejection reason is required.", "Error", JOptionPane.ERROR_MESSAGE);
+                            return;
+                        }
+                    } else {
+                        timesheet.setApprovalStatus(newStatus);
+                    }
                 }
+                
                 timesheet.setLastModifiedBy(authService.getCurrentUser().getUsername());
                 timesheet.setLastModifiedDate(LocalDateTime.now());
                 
@@ -3317,16 +3579,128 @@ public class SystemUI extends JFrame {
         dialog.setVisible(true);
     }
     
+    private void showApproveTimesheetDialog(int volunteerId) {
+        // Get pending timesheets for this volunteer
+        List<Timesheet> pendingTimesheets = timesheetController.listAll().stream()
+            .filter(ts -> ts.getVolunteerId() == volunteerId)
+            .filter(ts -> ts.getApprovalStatus() == TimesheetStatus.PENDING)
+            .toList();
+        
+        if (pendingTimesheets.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No pending timesheets found for this volunteer!", "Info", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        
+        // Let admin select which timesheet to approve
+        String[] options = pendingTimesheets.stream()
+            .map(ts -> "ID: " + ts.getTimesheetId() + " | " + ts.getPeriodStartDate() + " to " + ts.getPeriodEndDate() + " | " + ts.getTotalHours() + " hrs")
+            .toArray(String[]::new);
+        
+        String selected = (String) JOptionPane.showInputDialog(
+            this,
+            "Select timesheet to approve:",
+            "Approve Timesheet",
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            options,
+            options[0]
+        );
+        
+        if (selected == null) return;
+        
+        int timesheetId = Integer.parseInt(selected.split(" \\| ")[0].replace("ID: ", ""));
+        
+        int confirm = JOptionPane.showConfirmDialog(this,
+            "Are you sure you want to approve this timesheet?",
+            "Confirm Approval",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.QUESTION_MESSAGE);
+        
+        if (confirm == JOptionPane.YES_OPTION) {
+            try {
+                timesheetController.approve(timesheetId, authService.getCurrentUser().getId());
+                JOptionPane.showMessageDialog(this,
+                    "Timesheet approved successfully!",
+                    "Success",
+                    JOptionPane.INFORMATION_MESSAGE);
+                refreshAllPanels();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this,
+                    "Error approving timesheet: " + ex.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+    
+    private void showRejectTimesheetDialog(int volunteerId) {
+        // Get pending timesheets for this volunteer
+        List<Timesheet> pendingTimesheets = timesheetController.listAll().stream()
+            .filter(ts -> ts.getVolunteerId() == volunteerId)
+            .filter(ts -> ts.getApprovalStatus() == TimesheetStatus.PENDING)
+            .toList();
+        
+        if (pendingTimesheets.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No pending timesheets found for this volunteer!", "Info", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        
+        // Let admin select which timesheet to reject
+        String[] options = pendingTimesheets.stream()
+            .map(ts -> "ID: " + ts.getTimesheetId() + " | " + ts.getPeriodStartDate() + " to " + ts.getPeriodEndDate() + " | " + ts.getTotalHours() + " hrs")
+            .toArray(String[]::new);
+        
+        String selected = (String) JOptionPane.showInputDialog(
+            this,
+            "Select timesheet to reject:",
+            "Reject Timesheet",
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            options,
+            options[0]
+        );
+        
+        if (selected == null) return;
+        
+        int timesheetId = Integer.parseInt(selected.split(" \\| ")[0].replace("ID: ", ""));
+        
+        String reason = JOptionPane.showInputDialog(this,
+            "Enter rejection reason:",
+            "Rejection Reason",
+            JOptionPane.QUESTION_MESSAGE);
+        
+        if (reason != null && !reason.trim().isEmpty()) {
+            try {
+                timesheetController.reject(timesheetId, authService.getCurrentUser().getId(), reason);
+                JOptionPane.showMessageDialog(this,
+                    "Timesheet rejected successfully!",
+                    "Success",
+                    JOptionPane.INFORMATION_MESSAGE);
+                refreshAllPanels();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this,
+                    "Error rejecting timesheet: " + ex.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            }
+        } else {
+            JOptionPane.showMessageDialog(this,
+                "Rejection reason is required.",
+                "Error",
+                JOptionPane.WARNING_MESSAGE);
+        }
+    }
+    
     private void showCreateTimesheetDialog() {
-        JDialog dialog = new JDialog(this, "Create Timesheet for Volunteer", true);
-        dialog.setSize(450, 350);
+        JDialog dialog = new JDialog(this, "Create Timesheet for Event", true);
+        dialog.setSize(500, 450);
         dialog.setLocationRelativeTo(this);
         
         JPanel mainPanel = new JPanel(new BorderLayout(15, 15));
         mainPanel.setBackground(CARD_BG);
         mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
         
-        JPanel formPanel = new JPanel(new GridLayout(4, 2, 10, 15));
+        JPanel formPanel = new JPanel(new GridLayout(3, 2, 10, 15));
         formPanel.setBackground(CARD_BG);
         
         // Create volunteer dropdown
@@ -3337,25 +3711,65 @@ public class SystemUI extends JFrame {
             volunteerCombo.addItem(v.getId() + " - " + v.getFirstName() + " " + v.getLastName());
         }
         
-        JTextField startDateField = createModernTextField();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
-        startDateField.setText(LocalDate.now().withDayOfMonth(1).format(formatter));
-        JTextField endDateField = createModernTextField();
-        endDateField.setText(LocalDate.now().format(formatter));
+        // Event dropdown (will be populated based on selected volunteer)
+        JComboBox<String> eventCombo = new JComboBox<>();
+        eventCombo.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        eventCombo.setEnabled(false);
         
-        // Default status to PENDING (admins only have access to this dialog anyway)
-        JComboBox<TimesheetStatus> statusCombo = new JComboBox<>(TimesheetStatus.values());
-        statusCombo.setSelectedItem(TimesheetStatus.PENDING);
-        statusCombo.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        // Status field - fixed to PENDING
+        JTextField statusField = createModernTextField();
+        statusField.setText("PENDING");
+        statusField.setEditable(false);
+        statusField.setBackground(new Color(249, 250, 251));
         
         formPanel.add(createLabel("Volunteer:"));
         formPanel.add(volunteerCombo);
-        formPanel.add(createLabel("Start Date (MM-DD-YYYY):"));
-        formPanel.add(startDateField);
-        formPanel.add(createLabel("End Date (MM-DD-YYYY):"));
-        formPanel.add(endDateField);
+        formPanel.add(createLabel("Event:"));
+        formPanel.add(eventCombo);
         formPanel.add(createLabel("Status:"));
-        formPanel.add(statusCombo);
+        formPanel.add(statusField);
+        
+        // Update event dropdown when volunteer is selected
+        volunteerCombo.addActionListener(e -> {
+            String selected = (String) volunteerCombo.getSelectedItem();
+            if (selected != null && !selected.isEmpty()) {
+                int volunteerId = Integer.parseInt(selected.split(" - ")[0]);
+                
+                // Get completed attendance records without timesheets
+                List<Attendance> completedAttendance = attendanceController.listAll().stream()
+                    .filter(a -> a.getVolunteerId() == volunteerId)
+                    .filter(a -> a.getCheckInTime() != null && a.getCheckOutTime() != null)
+                    .filter(a -> a.getHoursWorked() > 0)
+                    .toList();
+                
+                // Filter out events with existing timesheets
+                List<Integer> existingTimesheetEventIds = timesheetController.listAll().stream()
+                    .filter(ts -> ts.getVolunteerId() == volunteerId)
+                    .filter(ts -> ts.getEventId() != null)
+                    .map(Timesheet::getEventId)
+                    .toList();
+                
+                List<Attendance> availableAttendance = completedAttendance.stream()
+                    .filter(a -> !existingTimesheetEventIds.contains(a.getEventId()))
+                    .toList();
+                
+                // Populate event dropdown
+                eventCombo.removeAllItems();
+                if (availableAttendance.isEmpty()) {
+                    eventCombo.addItem("No events available");
+                    eventCombo.setEnabled(false);
+                } else {
+                    for (Attendance att : availableAttendance) {
+                        Event event = eventController.get(att.getEventId());
+                        if (event != null) {
+                            eventCombo.addItem(event.getEventId() + " - " + event.getTitle() + 
+                                " (" + event.getEventDate() + ", " + String.format("%.1f hrs", att.getHoursWorked()) + ")");
+                        }
+                    }
+                    eventCombo.setEnabled(true);
+                }
+            }
+        });
         
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         buttonPanel.setBackground(CARD_BG);
@@ -3366,25 +3780,34 @@ public class SystemUI extends JFrame {
         JButton createBtn = createModernButton("Create", GREEN);
         createBtn.addActionListener(e -> {
             try {
-                // Extract volunteer ID from combo box selection
-                String selected = (String) volunteerCombo.getSelectedItem();
-                if (selected == null || selected.isEmpty()) {
+                // Extract volunteer ID
+                String selectedVolunteer = (String) volunteerCombo.getSelectedItem();
+                if (selectedVolunteer == null || selectedVolunteer.isEmpty()) {
                     JOptionPane.showMessageDialog(dialog, 
                         "Please select a volunteer", 
                         "Error", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
-                int volunteerId = Integer.parseInt(selected.split(" - ")[0]);
+                int volunteerId = Integer.parseInt(selectedVolunteer.split(" - ")[0]);
                 
-                DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
-                Timesheet ts = timesheetController.submit(
-                    volunteerId,
-                    LocalDate.parse(startDateField.getText(), inputFormatter),
-                    LocalDate.parse(endDateField.getText(), inputFormatter),
-                    (TimesheetStatus) statusCombo.getSelectedItem()
-                );
+                // Extract event ID and name
+                String selectedEvent = (String) eventCombo.getSelectedItem();
+                if (selectedEvent == null || selectedEvent.isEmpty() || selectedEvent.equals("No events available")) {
+                    JOptionPane.showMessageDialog(dialog, 
+                        "Please select an event or ensure the volunteer has attended events", 
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                
+                String[] eventParts = selectedEvent.split(" - ");
+                int eventId = Integer.parseInt(eventParts[0]);
+                String eventName = eventParts[1].substring(0, eventParts[1].indexOf(" ("));
+                
+                // Create timesheet for this event (status is always PENDING)
+                Timesheet ts = timesheetController.submitForEvent(volunteerId, eventId, eventName);
+                
                 JOptionPane.showMessageDialog(dialog, 
-                    "Timesheet created successfully!\nID: " + ts.getTimesheetId() + "\nTotal Hours: " + ts.getTotalHours(),
+                    "Timesheet created successfully!\nEvent: " + eventName + "\nTotal Hours: " + ts.getTotalHours() + "\nStatus: PENDING",
                     "Success", JOptionPane.INFORMATION_MESSAGE);
                 dialog.dispose();
                 refreshAllPanels();

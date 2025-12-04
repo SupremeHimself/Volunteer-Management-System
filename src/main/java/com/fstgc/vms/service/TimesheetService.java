@@ -61,6 +61,29 @@ public class TimesheetService {
         return timesheets.update(t);
     }
     
+    /**
+     * Submit timesheet for a specific event
+     */
+    public Timesheet submitForEvent(int volunteerId, int eventId, String eventName) {
+        // Find attendance record for this volunteer and event
+        Attendance attendanceRecord = attendance.findByVolunteer(volunteerId).stream()
+            .filter(a -> a.getEventId() == eventId)
+            .filter(a -> a.getCheckInTime() != null && a.getCheckOutTime() != null)
+            .findFirst()
+            .orElseThrow(() -> new RuntimeException("No completed attendance record found for this event"));
+        
+        Timesheet t = new Timesheet();
+        t.setVolunteerId(volunteerId);
+        t.setAttendanceId(attendanceRecord.getAttendanceId()); // Link to attendance record
+        t.setEventId(eventId);
+        t.setEventName(eventName);
+        t.setPeriodStartDate(attendanceRecord.getCheckInTime().toLocalDate());
+        t.setPeriodEndDate(attendanceRecord.getCheckOutTime().toLocalDate());
+        t.setTotalHours(Math.round(attendanceRecord.getHoursWorked() * 100.0) / 100.0);
+        t.setApprovalStatus(TimesheetStatus.PENDING);
+        return timesheets.save(t);
+    }
+    
     public void update(Timesheet timesheet) {
         timesheets.update(timesheet);
     }
