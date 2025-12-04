@@ -1922,21 +1922,30 @@ public class SystemUI extends JFrame {
         JPanel tableCard = createModernCard();
         tableCard.setLayout(new BorderLayout());
         
-        String[] columnNames = {"ID", "Volunteer ID", "Event ID", "Hours", "Status", "Actions"};
+        String[] columnNames = {"ID", "Volunteer ID", "Event ID", "Event Name", "Location", "Event Date", "Hours", "Status", "Actions"};
         DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return column == 5; // Only Actions column is editable
+                return column == 8; // Only Actions column is editable
             }
         };
         JTable table = createModernTable(tableModel);
         
         List<Attendance> attendances = attendanceController.listAll();
         for (Attendance a : attendances) {
+            // Get event details
+            Event event = eventController.get(a.getEventId());
+            String eventName = event != null ? event.getTitle() : "N/A";
+            String location = event != null ? event.getLocation() : "N/A";
+            String eventDate = event != null ? event.getEventDate().toString() : "N/A";
+            
             tableModel.addRow(new Object[]{
                 a.getAttendanceId(),
                 a.getVolunteerId(),
                 a.getEventId(),
+                eventName,
+                location,
+                eventDate,
                 String.format("%.1f hrs", a.getHoursWorked()),
                 a.getStatus(),
                 "Actions"
@@ -2416,44 +2425,72 @@ public class SystemUI extends JFrame {
         Role currentRole = authService.getCurrentUser().getRole();
         boolean isAdmin = (currentRole == Role.ADMIN || currentRole == Role.SUPER_ADMIN);
         
-        if (isAdmin && timesheet.getApprovalStatus() == TimesheetStatus.PENDING) {
+        if (isAdmin) {
             JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 5));
             buttonPanel.setBackground(CARD_BG);
             
-            JButton approveBtn = new JButton("Approve");
-            approveBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-            approveBtn.setForeground(Color.WHITE);
-            approveBtn.setBackground(GREEN);
-            approveBtn.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
-            approveBtn.setFocusPainted(false);
-            approveBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            approveBtn.addActionListener(e -> {
-                timesheetController.approve(timesheet.getTimesheetId(), authService.getCurrentUser().getId());
-                refreshTimesheetPanel();
-                JOptionPane.showMessageDialog(this, "Timesheet approved successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
-            });
-            
-            JButton rejectBtn = new JButton("Reject");
-            rejectBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-            rejectBtn.setForeground(Color.WHITE);
-            rejectBtn.setBackground(new Color(239, 68, 68));
-            rejectBtn.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
-            rejectBtn.setFocusPainted(false);
-            rejectBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            rejectBtn.addActionListener(e -> {
-                String reason = JOptionPane.showInputDialog(this, 
-                    "Enter reason for rejection:", 
-                    "Reject Timesheet", 
-                    JOptionPane.QUESTION_MESSAGE);
-                if (reason != null && !reason.trim().isEmpty()) {
-                    timesheetController.reject(timesheet.getTimesheetId(), authService.getCurrentUser().getId(), reason);
+            if (timesheet.getApprovalStatus() == TimesheetStatus.PENDING) {
+                JButton approveBtn = new JButton("Approve");
+                approveBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+                approveBtn.setForeground(Color.WHITE);
+                approveBtn.setBackground(GREEN);
+                approveBtn.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
+                approveBtn.setFocusPainted(false);
+                approveBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                approveBtn.addActionListener(e -> {
+                    timesheetController.approve(timesheet.getTimesheetId(), authService.getCurrentUser().getId());
                     refreshTimesheetPanel();
-                    JOptionPane.showMessageDialog(this, "Timesheet rejected.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Timesheet approved successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                });
+                
+                JButton rejectBtn = new JButton("Reject");
+                rejectBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+                rejectBtn.setForeground(Color.WHITE);
+                rejectBtn.setBackground(new Color(239, 68, 68));
+                rejectBtn.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
+                rejectBtn.setFocusPainted(false);
+                rejectBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                rejectBtn.addActionListener(e -> {
+                    String reason = JOptionPane.showInputDialog(this, 
+                        "Enter reason for rejection:", 
+                        "Reject Timesheet", 
+                        JOptionPane.QUESTION_MESSAGE);
+                    if (reason != null && !reason.trim().isEmpty()) {
+                        timesheetController.reject(timesheet.getTimesheetId(), authService.getCurrentUser().getId(), reason);
+                        refreshTimesheetPanel();
+                        JOptionPane.showMessageDialog(this, "Timesheet rejected.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                    }
+                });
+                
+                buttonPanel.add(approveBtn);
+                buttonPanel.add(rejectBtn);
+            }
+            
+            // Delete button available for all statuses
+            JButton deleteBtn = new JButton("Delete");
+            deleteBtn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            deleteBtn.setForeground(Color.WHITE);
+            deleteBtn.setBackground(new Color(220, 38, 38));
+            deleteBtn.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
+            deleteBtn.setFocusPainted(false);
+            deleteBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            deleteBtn.addActionListener(e -> {
+                int confirm = JOptionPane.showConfirmDialog(this,
+                    "Are you sure you want to delete this timesheet? This action cannot be undone.",
+                    "Confirm Delete",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
+                if (confirm == JOptionPane.YES_OPTION) {
+                    if (timesheetController.delete(timesheet.getTimesheetId())) {
+                        refreshTimesheetPanel();
+                        JOptionPane.showMessageDialog(this, "Timesheet deleted successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Failed to delete timesheet.", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
                 }
             });
             
-            buttonPanel.add(approveBtn);
-            buttonPanel.add(rejectBtn);
+            buttonPanel.add(deleteBtn);
             card.add(buttonPanel, BorderLayout.SOUTH);
         }
         

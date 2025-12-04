@@ -88,6 +88,10 @@ public class TimesheetService {
         timesheets.update(timesheet);
     }
     
+    public boolean delete(int timesheetId) {
+        return timesheets.delete(timesheetId);
+    }
+    
     public List<Timesheet> listAll() {
         return timesheets.findAll();
     }
