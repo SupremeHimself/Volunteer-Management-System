@@ -31,8 +31,8 @@
       "title": "Christmas Day Outreach Programme",
       "eventDate": "2025-12-25",
       "location": "UWI Mona",
-      "capacity": 99,
-      "currentRegistrations": 1,
+      "capacity": 98,
+      "currentRegistrations": 2,
       "eventType": "COMMUNITY_SERVICE",
       "status": "PUBLISHED",
       "createdByAdminId": 0,
@@ -84,6 +84,13 @@
       "checkInTime": "2025-12-03T18:16:25.4168153",
       "status": "PRESENT",
       "hoursWorked": 20.0
+    },
+    "3": {
+      "attendanceId": 3,
+      "volunteerId": 2,
+      "eventId": 1,
+      "checkInTime": "2025-12-03T19:14:18.8944947",
+      "hoursWorked": 0.0
     }
   },
   "announcements": {
@@ -145,8 +152,22 @@
       "periodStartDate": "2025-12-01",
       "periodEndDate": "2025-12-03",
       "totalHours": 0.0,
-      "approvalStatus": "PENDING",
+      "approvalStatus": "REJECTED",
+      "approvedByAdminId": 1,
+      "approvalDate": "2025-12-03T19:22:10.1394455",
+      "rejectionReason": "no event selected",
       "createdDate": "2025-12-03T18:36:29.1597815"
+    },
+    "6": {
+      "timesheetId": 6,
+      "volunteerId": 2,
+      "eventId": 1,
+      "eventName": "Christmas Day Outreach Programme",
+      "periodStartDate": "2025-12-25",
+      "periodEndDate": "2025-12-25",
+      "totalHours": 0.0,
+      "approvalStatus": "PENDING",
+      "createdDate": "2025-12-03T19:14:18.8995716"
     }
   },
   "admins": {
@@ -154,7 +175,7 @@
       "username": "admin",
       "passwordHash": "JAvlGPq9JyTdtvBO6x2llnRI1+gxwIyPqCKAn3THIKk\u003d",
       "role": "SUPER_ADMIN",
-      "lastLogin": "2025-12-03T18:15:28.8129666",
+      "lastLogin": "2025-12-03T19:21:48.516848",
       "failedLoginAttempts": 0,
       "accountStatus": "ACTIVE",
       "createdDate": "2025-12-02T21:50:19.3207691",
@@ -168,7 +189,7 @@
       "username": "csharpe",
       "passwordHash": "75K3eLr+dx6JJFuJ7LwIpEpOFmwGZZkRiB84PURz6U8\u003d",
       "role": "VOLUNTEER",
-      "lastLogin": "2025-12-03T19:03:52.3270868",
+      "lastLogin": "2025-12-03T19:20:29.0296568",
       "failedLoginAttempts": 0,
       "accountStatus": "ACTIVE",
       "createdDate": "2025-12-02T23:43:47.4293635",

@@ -71,7 +71,7 @@ public class AuthenticationService {
             if (admin.getFailedLoginAttempts() >= 5) {
                 admin.setAccountLockedUntil(LocalDateTime.now().plusMinutes(15));
             }
-            adminRepository.updatePassword(admin.getId(), admin.getPasswordHash());
+            adminRepository.update(admin);
             return false;
         }
 
@@ -79,7 +79,7 @@ public class AuthenticationService {
         admin.setFailedLoginAttempts(0);
         admin.setAccountLockedUntil(null);
         admin.setLastLogin(LocalDateTime.now());
-        adminRepository.updatePassword(admin.getId(), admin.getPasswordHash());
+        adminRepository.update(admin);
         
         this.currentUser = admin;
         
@@ -243,7 +243,7 @@ public class AuthenticationService {
         SystemAdmin admin = adminOpt.get();
         admin.setSecurityQuestion(securityQuestion);
         admin.setSecurityAnswerHash(hashPassword(securityAnswer.trim().toLowerCase()));
-        adminRepository.updatePassword(admin.getId(), admin.getPasswordHash());
+        adminRepository.update(admin);
         
         return true;
     }

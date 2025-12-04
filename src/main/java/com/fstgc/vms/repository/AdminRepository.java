@@ -9,6 +9,7 @@ public interface AdminRepository {
     Optional<SystemAdmin> findById(int id);
     boolean validateCredentials(String username, String passwordHash);
     SystemAdmin save(SystemAdmin admin);
+    SystemAdmin update(SystemAdmin admin);
     SystemAdmin updatePassword(int id, String newHash);
     SystemAdmin updatePermissions(int id, String permissionsJson);
 }

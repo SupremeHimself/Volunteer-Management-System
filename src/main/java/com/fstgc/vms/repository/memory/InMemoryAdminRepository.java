@@ -57,6 +57,15 @@ public class InMemoryAdminRepository implements AdminRepository {
     }
 
     @Override
+    public SystemAdmin update(SystemAdmin admin) {
+        if (admin != null && admin.getId() > 0) {
+            store.put(admin.getId(), admin);
+            DataPersistence.saveAdmins(store);
+        }
+        return admin;
+    }
+
+    @Override
     public SystemAdmin updatePassword(int id, String newHash) {
         SystemAdmin admin = store.get(id);
         if (admin != null) {

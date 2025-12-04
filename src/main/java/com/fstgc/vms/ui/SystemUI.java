@@ -426,10 +426,28 @@ public class SystemUI extends JFrame {
         boolean isAdmin = (role == Role.ADMIN || role == Role.SUPER_ADMIN);
         LocalDate today = LocalDate.now();
         
+        // Get current volunteer's registered events
+        List<Integer> registeredEventIds = new ArrayList<>();
+        if (!isAdmin) {
+            Volunteer currentVol = volunteerController.listAll().stream()
+                .filter(v -> v.getEmail().equals(authService.getCurrentUser().getEmail()))
+                .findFirst()
+                .orElse(null);
+            
+            if (currentVol != null) {
+                registeredEventIds = attendanceController.byVolunteer(currentVol.getId()).stream()
+                    .map(Attendance::getEventId)
+                    .toList();
+            }
+        }
+        
+        final List<Integer> finalRegisteredEventIds = registeredEventIds;
         List<com.fstgc.vms.model.Event> filteredEvents = events.stream()
             .filter(e -> !e.getEventDate().isBefore(today)) // Only show upcoming events
             .filter(e -> {
                 if (isAdmin) return true; // Admins see all events
+                // Hide events user is already registered for
+                if (finalRegisteredEventIds.contains(e.getEventId())) return false;
                 int totalCapacity = e.getCapacity() + e.getCurrentRegistrations();
                 return e.getCurrentRegistrations() < totalCapacity; // Hide full events for users
             })
