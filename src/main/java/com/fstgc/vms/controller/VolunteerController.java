@@ -10,29 +10,56 @@ import java.util.Optional;
 public class VolunteerController {
     private final VolunteerService service;
 
-    public VolunteerController(VolunteerService service) { this.service = service; }
+    public VolunteerController(VolunteerService service) {
+        this.service = service;
+    }
 
+    /**
+     * Register a new volunteer with basic information
+     */
     public Volunteer register(String firstName, String lastName, String email, String phone) {
-        Volunteer v = new Volunteer();
-        v.setFirstName(firstName);
-        v.setLastName(lastName);
-        v.setEmail(email);
-        v.setPhone(phone);
-        return service.register(v);
+        Volunteer volunteer = new Volunteer();
+        volunteer.setFirstName(firstName);
+        volunteer.setLastName(lastName);
+        volunteer.setEmail(email);
+        volunteer.setPhone(phone);
+        return service.register(volunteer);
     }
 
-    // Convenience overload in case a fully-built Volunteer is provided
-    public Volunteer register(Volunteer v) {
-        return service.register(v);
+    /**
+     * Register a volunteer using a pre-built Volunteer object
+     */
+    public Volunteer register(Volunteer volunteer) {
+        return service.register(volunteer);
     }
 
-    public Optional<Volunteer> get(int id) { return service.get(id); }
+    /**
+     * Get a volunteer by their ID
+     */
+    public Optional<Volunteer> get(int id) {
+        return service.get(id);
+    }
 
-    public Volunteer update(Volunteer v) { return service.update(v); }
+    /**
+     * Update an existing volunteer's information
+     */
+    public Volunteer update(Volunteer volunteer) {
+        return service.update(volunteer);
+    }
 
-    public List<Volunteer> list() { return service.list(); }
+    /**
+     * Get a list of all volunteers
+     */
+    public List<Volunteer> list() {
+        return service.list();
+    }
 
-    public List<Volunteer> listAll() { return service.list(); }
+    /**
+     * Get a list of all volunteers (alias for list())
+     */
+    public List<Volunteer> listAll() {
+        return service.list();
+    }
 
     public Volunteer updateVolunteer(int id,
                                      String firstName,

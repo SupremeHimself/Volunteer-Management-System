@@ -8,29 +8,48 @@ import java.time.LocalDate;
 public class EventController {
     private final EventService service;
 
-    public EventController(EventService service) { this.service = service; }
+    public EventController(EventService service) {
+        this.service = service;
+    }
 
+    /**
+     * Create a new event with the specified details
+     */
     public Event create(String title, LocalDate date, int capacity, EventType type, String location) {
-        Event e = new Event();
-        e.setTitle(title);
-        e.setEventDate(date);
-        e.setCapacity(capacity);
-        e.setEventType(type);
-        e.setLocation(location);
-        return service.create(e);
+        Event event = new Event();
+        event.setTitle(title);
+        event.setEventDate(date);
+        event.setCapacity(capacity);
+        event.setEventType(type);
+        event.setLocation(location);
+        return service.create(event);
     }
     
+    /**
+     * Get an event by its ID
+     */
     public Event get(int eventId) {
         return service.get(eventId);
     }
     
+    /**
+     * Update an existing event
+     */
     public void update(Event event) {
         service.update(event);
     }
     
+    /**
+     * Delete an event by ID
+     */
     public boolean delete(int eventId) {
         return service.delete(eventId);
     }
     
-    public java.util.List<Event> listAll() { return service.listAll(); }
+    /**
+     * Get a list of all events
+     */
+    public java.util.List<Event> listAll() {
+        return service.listAll();
+    }
 }

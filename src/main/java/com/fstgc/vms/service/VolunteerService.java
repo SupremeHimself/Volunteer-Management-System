@@ -21,22 +21,46 @@ public class VolunteerService {
         this.attendanceRepository = attendanceRepository;
     }
 
-    public Volunteer register(Volunteer v) {
-        if (!isValidEmail(v.getEmail())) throw new IllegalArgumentException("Invalid email");
-        repository.findByEmail(v.getEmail()).ifPresent(x -> { throw new IllegalArgumentException("Email already exists"); });
-        if (v.getPhone()!=null && !isValidPhone(v.getPhone())) throw new IllegalArgumentException("Invalid phone");
-        v.setStatus(VolunteerStatus.ACTIVE);
-        return repository.save(v);
+    public Volunteer register(Volunteer volunteer) {
+        // Validate email format
+        if (!isValidEmail(volunteer.getEmail())) {
+            throw new IllegalArgumentException("Invalid email format");
+        }
+        
+        // Check if email already exists
+        repository.findByEmail(volunteer.getEmail()).ifPresent(existing -> {
+            throw new IllegalArgumentException("Email already exists");
+        });
+        
+        // Validate phone number if provided
+        if (volunteer.getPhone() != null && !isValidPhone(volunteer.getPhone())) {
+            throw new IllegalArgumentException("Invalid phone number format");
+        }
+        
+        volunteer.setStatus(VolunteerStatus.ACTIVE);
+        return repository.save(volunteer);
     }
     
-    public Volunteer register(Volunteer v, String modifiedBy) {
-        if (!isValidEmail(v.getEmail())) throw new IllegalArgumentException("Invalid email");
-        repository.findByEmail(v.getEmail()).ifPresent(x -> { throw new IllegalArgumentException("Email already exists"); });
-        if (v.getPhone()!=null && !isValidPhone(v.getPhone())) throw new IllegalArgumentException("Invalid phone");
-        v.setStatus(VolunteerStatus.ACTIVE);
-        v.setLastModifiedBy(modifiedBy);
-        v.setLastModifiedDate(java.time.LocalDateTime.now());
-        return repository.save(v);
+    public Volunteer register(Volunteer volunteer, String modifiedBy) {
+        // Validate email format
+        if (!isValidEmail(volunteer.getEmail())) {
+            throw new IllegalArgumentException("Invalid email format");
+        }
+        
+        // Check if email already exists
+        repository.findByEmail(volunteer.getEmail()).ifPresent(existing -> {
+            throw new IllegalArgumentException("Email already exists");
+        });
+        
+        // Validate phone number if provided
+        if (volunteer.getPhone() != null && !isValidPhone(volunteer.getPhone())) {
+            throw new IllegalArgumentException("Invalid phone number format");
+        }
+        
+        volunteer.setStatus(VolunteerStatus.ACTIVE);
+        volunteer.setLastModifiedBy(modifiedBy);
+        volunteer.setLastModifiedDate(java.time.LocalDateTime.now());
+        return repository.save(volunteer);
     }
 
     private boolean isValidEmail(String email) {
