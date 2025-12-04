@@ -57,4 +57,12 @@ public class VolunteerController {
     public Optional<Volunteer> changeStatus(int id, VolunteerStatus status) {
         return service.get(id);
     }
+    
+    public void updateVolunteerTier(int volunteerId) {
+        service.updateVolunteerTier(volunteerId);
+    }
+    
+    public double getTotalHoursWorked(int volunteerId) {
+        return service.getTotalHoursWorked(volunteerId);
+    }
 }

@@ -51,12 +51,14 @@ public class SystemUI extends JFrame {
         this.authService = authService;
         
         // Initialize services and controllers
+        InMemoryAttendanceRepository attendanceRepository = new InMemoryAttendanceRepository();
         VolunteerService volunteerService = new VolunteerService(new InMemoryVolunteerRepository());
+        volunteerService.setAttendanceRepository(attendanceRepository); // Enable tier calculation
         InMemoryEventRepository eventRepository = new InMemoryEventRepository();
         EventService eventService = new EventService(eventRepository);
         InMemoryTimesheetRepository timesheetRepository = new InMemoryTimesheetRepository();
-        AttendanceService attendanceService = new AttendanceService(new InMemoryAttendanceRepository(), eventRepository, timesheetRepository);
-        TimesheetService timesheetService = new TimesheetService(timesheetRepository, new InMemoryAttendanceRepository());
+        AttendanceService attendanceService = new AttendanceService(attendanceRepository, eventRepository, timesheetRepository);
+        TimesheetService timesheetService = new TimesheetService(timesheetRepository, attendanceRepository);
         AnnouncementService announcementService = new AnnouncementService(new InMemoryAnnouncementRepository());
         AwardService awardService = new AwardService(new InMemoryAwardRepository());
 
@@ -696,7 +698,7 @@ public class SystemUI extends JFrame {
             profileCard.setBorder(new EmptyBorder(20, 20, 20, 20));
 
             // Profile info panel
-            JPanel infoPanel = new JPanel(new GridLayout(8, 2, 10, 15));
+            JPanel infoPanel = new JPanel(new GridLayout(9, 2, 10, 15));
             infoPanel.setBackground(CARD_BG);
 
             infoPanel.add(createLabel("Volunteer ID:"));
@@ -716,6 +718,12 @@ public class SystemUI extends JFrame {
             
             infoPanel.add(createLabel("Total Hours Worked:"));
             infoPanel.add(createLabel(String.format("%.1f hrs", calculateTotalHours(currentVolunteer.getId()))));
+            
+            infoPanel.add(createLabel("Achievement Tier:"));
+            String tierDisplay = currentVolunteer.getCurrentTier() != null ? 
+                getTierEmoji(currentVolunteer.getCurrentTier()) + " " + currentVolunteer.getCurrentTier().toString() : 
+                "None (requires 10+ hours)";
+            infoPanel.add(createLabel(tierDisplay));
             
             infoPanel.add(createLabel("Events Attended:"));
             infoPanel.add(createLabel(String.valueOf(calculateEventsAttended(currentVolunteer.getId()))));
@@ -2139,6 +2147,9 @@ public class SystemUI extends JFrame {
                 );
                 JOptionPane.showMessageDialog(dialog, "Attendance recorded! Hours: " + a.getHoursWorked());
                 dialog.dispose();
+                
+                // Update volunteer's achievement tier based on total hours
+                volunteerController.updateVolunteerTier(volId);
                 
                 // Check and award badges based on new total hours
                 checkAndAwardBadges(volId);
@@ -3978,6 +3989,16 @@ public class SystemUI extends JFrame {
         
         // Try to award the badge (will return null if already awarded)
         return awardController.assign(volunteerId, criteria);
+    }
+    
+    private String getTierEmoji(com.fstgc.vms.model.enums.BadgeTier tier) {
+        switch (tier) {
+            case BRONZE: return "🥉";
+            case SILVER: return "🥈";
+            case GOLD: return "🥇";
+            case PLATINUM: return "💎";
+            default: return "";
+        }
     }
 
     public void launch() {

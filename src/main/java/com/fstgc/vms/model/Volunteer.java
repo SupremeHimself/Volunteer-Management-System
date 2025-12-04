@@ -1,5 +1,6 @@
 package com.fstgc.vms.model;
 
+import com.fstgc.vms.model.enums.BadgeTier;
 import com.fstgc.vms.model.enums.VolunteerStatus;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -15,6 +16,7 @@ public class Volunteer extends Person {
     private String lastModifiedBy;
     private LocalDateTime lastModifiedDate;
     private int badgesEarned = 0;
+    private BadgeTier currentTier = null; // Achievement tier based on total hours worked
 
     public LocalDateTime getRegistrationDate() { return registrationDate; }
     public void setRegistrationDate(LocalDateTime registrationDate) { this.registrationDate = registrationDate; }
@@ -36,6 +38,9 @@ public class Volunteer extends Person {
     public void setLastModifiedDate(LocalDateTime lastModifiedDate) { this.lastModifiedDate = lastModifiedDate; }
     public int getBadgesEarned() { return badgesEarned; }
     public void setBadgesEarned(int badgesEarned) { this.badgesEarned = badgesEarned; }
+    
+    public BadgeTier getCurrentTier() { return currentTier; }
+    public void setCurrentTier(BadgeTier currentTier) { this.currentTier = currentTier; }
     
     // Placeholder for total hours calculation - in production this would aggregate from attendance records
     public double getTotalHoursWorked() {
