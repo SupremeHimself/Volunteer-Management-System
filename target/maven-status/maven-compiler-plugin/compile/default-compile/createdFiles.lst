@@ -1,9 +1,7 @@
 com\fstgc\vms\controller\AttendanceController.class
 com\fstgc\vms\model\enums\Role.class
-com\fstgc\vms\service\NotificationService.class
 com\fstgc\vms\model\SystemAdmin.class
 com\fstgc\vms\repository\EventRepository.class
-com\fstgc\vms\service\ValidationService.class
 com\fstgc\vms\repository\AwardRepository.class
 com\fstgc\vms\model\Person.class
 com\fstgc\vms\repository\AdminRepository.class
@@ -33,7 +31,6 @@ com\fstgc\vms\util\DataPersistence$LocalDateTimeAdapter.class
 com\fstgc\vms\model\Timesheet.class
 com\fstgc\vms\Main.class
 com\fstgc\vms\model\enums\AttendanceStatus.class
-com\fstgc\vms\ui\SystemTXT.class
 com\fstgc\vms\ui\SystemUI$7.class
 com\fstgc\vms\model\enums\TimesheetStatus.class
 com\fstgc\vms\repository\memory\InMemoryVolunteerRepository.class
@@ -46,7 +43,6 @@ com\fstgc\vms\service\EventService.class
 com\fstgc\vms\ui\LoginDialog$2.class
 com\fstgc\vms\model\AuditLog.class
 com\fstgc\vms\repository\memory\InMemoryAnnouncementRepository.class
-com\fstgc\vms\util\ExportUtil.class
 com\fstgc\vms\repository\memory\InMemoryEventRepository.class
 com\fstgc\vms\ui\SystemUI$6.class
 com\fstgc\vms\model\enums\Priority.class
@@ -59,7 +55,6 @@ com\fstgc\vms\model\AwardCriteria.class
 com\fstgc\vms\service\TimesheetService.class
 com\fstgc\vms\model\Volunteer.class
 com\fstgc\vms\service\AuthenticationService.class
-com\fstgc\vms\service\LoggingService.class
 com\fstgc\vms\ui\SystemUI$3.class
 com\fstgc\vms\repository\memory\InMemoryAttendanceRepository.class
 com\fstgc\vms\model\enums\AccountStatus.class

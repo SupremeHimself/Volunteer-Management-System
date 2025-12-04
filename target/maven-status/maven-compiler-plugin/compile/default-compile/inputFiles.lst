@@ -11,7 +11,6 @@ C:\xampp\htdocs\Volunteer-Management-System\src\main\java\com\fstgc\vms\service\
 C:\xampp\htdocs\Volunteer-Management-System\src\main\java\com\fstgc\vms\controller\AwardController.java
 C:\xampp\htdocs\Volunteer-Management-System\src\main\java\com\fstgc\vms\service\EventService.java
 C:\xampp\htdocs\Volunteer-Management-System\src\main\java\com\fstgc\vms\repository\memory\InMemoryVolunteerRepository.java
-C:\xampp\htdocs\Volunteer-Management-System\src\main\java\com\fstgc\vms\service\LoggingService.java
 C:\xampp\htdocs\Volunteer-Management-System\src\main\java\com\fstgc\vms\model\Announcement.java
 C:\xampp\htdocs\Volunteer-Management-System\src\main\java\com\fstgc\vms\controller\EventController.java
 C:\xampp\htdocs\Volunteer-Management-System\src\main\java\com\fstgc\vms\service\AuthenticationService.java
@@ -30,17 +29,13 @@ C:\xampp\htdocs\Volunteer-Management-System\src\main\java\com\fstgc\vms\ui\Login
 C:\xampp\htdocs\Volunteer-Management-System\src\main\java\com\fstgc\vms\model\enums\AccountStatus.java
 C:\xampp\htdocs\Volunteer-Management-System\src\main\java\com\fstgc\vms\repository\memory\InMemoryEventRepository.java
 C:\xampp\htdocs\Volunteer-Management-System\src\main\java\com\fstgc\vms\repository\TimesheetRepository.java
-C:\xampp\htdocs\Volunteer-Management-System\src\main\java\com\fstgc\vms\service\ValidationService.java
-C:\xampp\htdocs\Volunteer-Management-System\src\main\java\com\fstgc\vms\ui\SystemTXT.java
 C:\xampp\htdocs\Volunteer-Management-System\src\main\java\com\fstgc\vms\repository\AttendanceRepository.java
 C:\xampp\htdocs\Volunteer-Management-System\src\main\java\com\fstgc\vms\service\AnnouncementService.java
 C:\xampp\htdocs\Volunteer-Management-System\src\main\java\com\fstgc\vms\model\Attendance.java
-C:\xampp\htdocs\Volunteer-Management-System\src\main\java\com\fstgc\vms\util\ExportUtil.java
 C:\xampp\htdocs\Volunteer-Management-System\src\main\java\com\fstgc\vms\model\enums\BadgeTier.java
 C:\xampp\htdocs\Volunteer-Management-System\src\main\java\com\fstgc\vms\model\enums\TargetAudience.java
 C:\xampp\htdocs\Volunteer-Management-System\src\main\java\com\fstgc\vms\repository\AnnouncementRepository.java
 C:\xampp\htdocs\Volunteer-Management-System\src\main\java\com\fstgc\vms\repository\VolunteerRepository.java
-C:\xampp\htdocs\Volunteer-Management-System\src\main\java\com\fstgc\vms\service\NotificationService.java
 C:\xampp\htdocs\Volunteer-Management-System\src\main\java\com\fstgc\vms\service\VolunteerService.java
 C:\xampp\htdocs\Volunteer-Management-System\src\main\java\com\fstgc\vms\controller\AnnouncementController.java
 C:\xampp\htdocs\Volunteer-Management-System\src\main\java\com\fstgc\vms\model\enums\CriteriaType.java
